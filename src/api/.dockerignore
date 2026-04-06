@@ -1,0 +1,107 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Testing
+.tox/
+.nox/
+.hypothesis/
+*.test
+.pytest_cache
+
+# Linting
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.flake8
+.pylint
+.isort.cfg
+
+# Documentation
+docs/_build/
+site/
+*.md (except key ones)
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+docker-compose*.yaml
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+azure-pipelines.yml
+
+# Project specific
+tests/
+test_*.py
+*_test.py
+*.sql
+*.log
+*.pid
+.env*
+local_settings.py
+
+# OS
+.DS_Store
+Thumbs.db
+.AppleDouble
+.AppleDB
+._*
+
+# Misc
+*.tmp
+*.bak
+*.swp
+.~lock*

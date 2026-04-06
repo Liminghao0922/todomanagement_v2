@@ -1,0 +1,56 @@
+name: Build and Deploy Web to ACR
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/web/**'
+      - '.github/workflows/build-deploy-web.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Install ContainerApp Extension
+        run: |
+          az extension add --name containerapp --upgrade
+
+      - name: Build and push image to ACR
+        uses: Azure/acr-build@v1
+        with:
+          service_principal: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
+          service_principal_password: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
+          tenant: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
+          registry: ${{ vars.ACR_NAME }}
+          repository: todomanagement-web
+          tag: latest
+          dockerfile: Dockerfile
+          folder: src/web
+          branch: main
+          build_args: '[{"VITE_AZURE_CLIENT_ID":"${{ vars.AZURE_CLIENT_ID }}"}, {"VITE_AZURE_AUTHORITY":"https://login.microsoftonline.com/${{ vars.AZURE_TENANT_ID }}"}, {"VITE_AZURE_REDIRECT_URI":"${{ vars.AZURE_REDIRECT_URI }}"}]'
+
+      - name: Deploy to Container App
+        run: |
+          az containerapp up \
+            --name todomanagement-web \
+            --resource-group ${{ vars.RESOURCE_GROUP }} \
+            --environment ${{ vars.CONTAINER_APP_ENVIRONMENT }} \
+            --image ${{ vars.ACR_NAME }}.azurecr.io/todomanagement-web:latest \
+            --registry-server ${{ vars.ACR_NAME }}.azurecr.io \
+            --registry-identity ${{ vars.USER_ASSIGNED_IDENTITY_RESOURCE_ID }} \
+            --target-port 80 \
+            --ingress external \
+            --env-vars API_PROXY_TARGET="${{ vars.API_PROXY_TARGET }}"

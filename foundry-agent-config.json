@@ -1,0 +1,38 @@
+{
+  "name": "todo-copilot-assistant",
+  "model": "gpt-4o-mini",
+  "description": "Todo assistant with calendar-aware prioritization and meeting action-item extraction.",
+  "instructions": [
+    "Use built-in Microsoft Graph calendar tool to understand availability.",
+    "Use built-in Cosmos DB tools to query Todo and project context across projects.",
+    "Use graph traversal to reason over SIMILAR_TO, BLOCKED_BY, PRECEDES, SUBTASK_OF edges.",
+    "If user pastes meeting notes, call extract_action_items custom tool and suggest creating tasks."
+  ],
+  "tools": [
+    {
+      "name": "extract_action_items",
+      "type": "rest",
+      "method": "POST",
+      "url": "https://<function-app>/api/tools/extract-action-items",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "meeting_text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "meeting_text"
+        ]
+      }
+    }
+  ],
+  "notes": {
+    "builtinTools": [
+      "microsoft.graph.calendar",
+      "azure.cosmosdb.query",
+      "azure.cosmosdb.gremlin"
+    ],
+    "deployment": "Create and configure in Azure AI Foundry Web UI."
+  }
+}
