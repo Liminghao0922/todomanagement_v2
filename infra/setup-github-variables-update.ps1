@@ -21,13 +21,7 @@ param(
     [string]$ApiBaseUrl,  # 兼容旧参数
 
     [Parameter(Mandatory=$false)]
-    [string]$ApiProxyTarget,  # Web 反向代理的上游 API URL
-
-    [Parameter(Mandatory=$false)]
-    [string]$UserAssignedIdentityClientId,  # 用户分配托管标识 Client ID
-
-    [Parameter(Mandatory=$false)]
-    [string]$UserAssignedIdentityResourceId  # 用户分配托管标识 Resource ID
+    [string]$ApiProxyTarget  # Web 反向代理的上游 API URL
 )
 
 if (-not $ApiProxyTarget -and $ApiBaseUrl) {
@@ -50,26 +44,14 @@ if (-not $AzureTenantId) {
 
 if (-not $ApiProxyTarget) {
     Write-Host "`n3. API 代理上游 URL"
-    Write-Host "   示例：https://todomanagement-api.xxxxxxx.japaneast.azurecontainerapps.io"
+    Write-Host "   示例：https://<function-app-name>.azurewebsites.net"
     $ApiProxyTarget = Read-Host "   输入 API_PROXY_TARGET"
 }
 
 if (-not $RedirectUri) {
     Write-Host "`n4. Web 应用重定向 URI"
-    Write-Host "   示例：https://todomanagement-web.xxxxxxx.japaneast.azurecontainerapps.io"
+    Write-Host "   示例：https://<static-web-app-name>.azurestaticapps.net"
     $RedirectUri = Read-Host "   输入 AZURE_REDIRECT_URI"
-}
-
-if (-not $UserAssignedIdentityClientId) {
-    Write-Host "`n5. 用户分配托管标识 Client ID"
-    Write-Host "   获取位置：Azure Portal → 你的资源组 → 托管标识 → 选择用户分配的标识 → 复制客户端 ID"
-    $UserAssignedIdentityClientId = Read-Host "   输入 USER_ASSIGNED_IDENTITY_CLIENT_ID"
-}
-
-if (-not $UserAssignedIdentityResourceId) {
-    Write-Host "`n6. 用户分配托管标识 Resource ID"
-    Write-Host "   获取位置：Azure Portal → 你的资源组 → 托管标识 → 选择用户分配的标识 → 复制资源 ID"
-    $UserAssignedIdentityResourceId = Read-Host "   输入 USER_ASSIGNED_IDENTITY_RESOURCE_ID"
 }
 
 if (-not $GitHubToken) {
@@ -89,8 +71,6 @@ Write-Host "AZURE_CLIENT_ID: $AzureClientId"
 Write-Host "AZURE_TENANT_ID: $AzureTenantId"
 Write-Host "AZURE_REDIRECT_URI: $RedirectUri"
 Write-Host "API_PROXY_TARGET: $ApiProxyTarget"
-Write-Host "USER_ASSIGNED_IDENTITY_CLIENT_ID: $UserAssignedIdentityClientId"
-Write-Host "USER_ASSIGNED_IDENTITY_RESOURCE_ID: $UserAssignedIdentityResourceId"
 Write-Host "=" * 60
 
 $proceed = Read-Host "`n确认配置？(y/n)"
@@ -113,8 +93,6 @@ if ($GitHubToken) {
         @{ name = "AZURE_TENANT_ID"; value = $AzureTenantId }
         @{ name = "AZURE_REDIRECT_URI"; value = $RedirectUri }
         @{ name = "API_PROXY_TARGET"; value = $ApiProxyTarget }
-        @{ name = "USER_ASSIGNED_IDENTITY_CLIENT_ID"; value = $UserAssignedIdentityClientId }
-        @{ name = "USER_ASSIGNED_IDENTITY_RESOURCE_ID"; value = $UserAssignedIdentityResourceId }
     )
     
     foreach ($var in $variables) {
@@ -153,8 +131,6 @@ if ($GitHubToken) {
     Write-Host "   | AZURE_TENANT_ID | $AzureTenantId |"
     Write-Host "   | AZURE_REDIRECT_URI | $RedirectUri |"
     Write-Host "   | API_PROXY_TARGET | $ApiProxyTarget |"
-    Write-Host "   | USER_ASSIGNED_IDENTITY_CLIENT_ID | $UserAssignedIdentityClientId |"
-    Write-Host "   | USER_ASSIGNED_IDENTITY_RESOURCE_ID | $UserAssignedIdentityResourceId |"
 }
 
 Write-Host "`n✅ 配置完成！现在可以重新运行 GitHub 工作流"

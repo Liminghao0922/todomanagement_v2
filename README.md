@@ -20,7 +20,7 @@ The infrastructure is designed to be **private, secure, and identity-based**, wi
 - Reference: `docs/ARCHITECTURE_GUIDE.md`
 
 ## Repository Structure
-- `src/api`: FastAPI service (SQLite for local development, PostgreSQL for production)
+- `src/api`: Azure Functions backend (Todo APIs, tool endpoints, timer jobs)
 - `src/web`: Vue 3 SPA (MSAL sign-in, Todo/search features)
 - `infra`: Bicep templates, deployment scripts, and parameters
 - `docs`: architecture and supporting documentation

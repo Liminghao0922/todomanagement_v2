@@ -1,9 +1,9 @@
-# 部署验证脚本 - 验证所有资源已正确部署
+# 部署验证脚本 - v3 架构 (Functions + SWA + Cosmos + OpenAI/Foundry)
 
 param(
     [Parameter(Mandatory = $true)]
     [string]$ResourceGroupName,
-    
+
     [Parameter(Mandatory = $false)]
     [string]$SubscriptionId
 )
@@ -11,11 +11,10 @@ param(
 $ErrorActionPreference = "Stop"
 
 Write-Host "==========================================" -ForegroundColor Green
-Write-Host "Azure Infrastructure Validation" -ForegroundColor Green
+Write-Host "Azure Infrastructure Validation (v3)" -ForegroundColor Green
 Write-Host "==========================================" -ForegroundColor Green
 Write-Host ""
 
-# Set subscription if provided
 if ($SubscriptionId) {
     az account set --subscription $SubscriptionId
 }
@@ -25,7 +24,7 @@ Write-Host "Subscription: $($subscription.name)" -ForegroundColor Cyan
 Write-Host "Resource Group: $ResourceGroupName" -ForegroundColor Cyan
 Write-Host ""
 
-# Check if resource group exists
+# Check resource group
 Write-Host "检查资源组..." -ForegroundColor Yellow
 $rg = az group show --name $ResourceGroupName 2>$null
 if (!$rg) {
@@ -34,114 +33,94 @@ if (!$rg) {
 }
 Write-Host "✓ 资源组存在" -ForegroundColor Green
 
-# Check Virtual Network
+# Cosmos DB
 Write-Host ""
-Write-Host "检查Virtual Network..." -ForegroundColor Yellow
-$vnets = az network vnet list --resource-group $ResourceGroupName | ConvertFrom-Json
-if ($vnets.Count -eq 0) {
-    Write-Host "✗ 警告: 未找到Virtual Network" -ForegroundColor Yellow
+Write-Host "检查 Azure Cosmos DB..." -ForegroundColor Yellow
+$cosmosAccounts = az cosmosdb list --resource-group $ResourceGroupName | ConvertFrom-Json
+if (!$cosmosAccounts -or $cosmosAccounts.Count -eq 0) {
+    Write-Host "✗ 警告: 未找到 Cosmos DB 账户" -ForegroundColor Yellow
 } else {
-    Write-Host "✓ Virtual Network found: $($vnets[0].name)" -ForegroundColor Green
-    Write-Host "  地址范围: $($vnets[0].addressSpace.addressPrefixes[0])"
-    Write-Host "  子网数量: $($vnets[0].subnets.Count)"
-}
+    $cosmos = $cosmosAccounts[0]
+    Write-Host "✓ Cosmos DB found: $($cosmos.name)" -ForegroundColor Green
+    Write-Host "  Endpoint: $($cosmos.documentEndpoint)"
+    Write-Host "  Kind: $($cosmos.kind)"
 
-# Check PostgreSQL Server
-Write-Host ""
-Write-Host "检查PostgreSQL Flexible Server..." -ForegroundColor Yellow
-$pgServers = az postgres flexible-server list --resource-group $ResourceGroupName | ConvertFrom-Json
-if ($pgServers.Count -eq 0) {
-    Write-Host "✗ 警告: 未找到PostgreSQL服务器" -ForegroundColor Yellow
-} else {
-    $pgServer = $pgServers[0]
-    Write-Host "✓ PostgreSQL Server found: $($pgServer.name)" -ForegroundColor Green
-    Write-Host "  版本: $($pgServer.version)"
-    Write-Host "  SKU: $($pgServer.sku.name)"
-    Write-Host "  状态: $($pgServer.state)"
-    Write-Host "  完全限定域名: $($pgServer.fullyQualifiedDomainName)"
-    
-    # Check Entra ID Authentication
-    Write-Host "  检查Entra ID认证配置..." -ForegroundColor Cyan
-    $authConfig = $pgServer.authConfig
-    if ($authConfig.activeDirectoryAuth -eq "Enabled") {
-        Write-Host "  ✓ Entra ID认证: 已启用" -ForegroundColor Green
-    } else {
-        Write-Host "  ✗ Entra ID认证: 未启用" -ForegroundColor Red
+    $sqlDbs = az cosmosdb sql database list --account-name $cosmos.name --resource-group $ResourceGroupName | ConvertFrom-Json
+    if ($sqlDbs -and $sqlDbs.Count -gt 0) {
+        Write-Host "  SQL Databases:" -ForegroundColor Cyan
+        foreach ($db in $sqlDbs) {
+            Write-Host "    - $($db.name)"
+        }
     }
-    
-    # Check Databases
-    Write-Host "  数据库:" -ForegroundColor Cyan
-    $databases = az postgres flexible-server db list --server-name $pgServer.name --resource-group $ResourceGroupName | ConvertFrom-Json
-    foreach ($db in $databases) {
-        Write-Host "    - $($db.name)"
+
+    $graphDbs = az cosmosdb gremlin database list --account-name $cosmos.name --resource-group $ResourceGroupName | ConvertFrom-Json
+    if ($graphDbs -and $graphDbs.Count -gt 0) {
+        Write-Host "  Gremlin Databases:" -ForegroundColor Cyan
+        foreach ($gdb in $graphDbs) {
+            Write-Host "    - $($gdb.name)"
+        }
     }
 }
 
-# Check Azure Container Registry
+# Function App
 Write-Host ""
-Write-Host "检查Azure Container Registry..." -ForegroundColor Yellow
-$registries = az acr list --resource-group $ResourceGroupName | ConvertFrom-Json
-if ($registries.Count -eq 0) {
-    Write-Host "✗ 警告: 未找到Container Registry" -ForegroundColor Yellow
+Write-Host "检查 Azure Functions..." -ForegroundColor Yellow
+$functionApps = az functionapp list --resource-group $ResourceGroupName | ConvertFrom-Json
+if (!$functionApps -or $functionApps.Count -eq 0) {
+    Write-Host "✗ 警告: 未找到 Function App" -ForegroundColor Yellow
 } else {
-    $registry = $registries[0]
-    Write-Host "✓ Container Registry found: $($registry.name)" -ForegroundColor Green
-    Write-Host "  登录服务器: $($registry.loginServer)"
-    Write-Host "  SKU: $($registry.sku.name)"
-    Write-Host "  资源ID: $($registry.id)"
-}
+    $func = $functionApps[0]
+    Write-Host "✓ Function App found: $($func.name)" -ForegroundColor Green
+    Write-Host "  Runtime: $($func.kind)"
+    Write-Host "  State: $($func.state)"
+    Write-Host "  Host: https://$($func.defaultHostName)"
 
-# Check Container App Environment
-Write-Host ""
-Write-Host "检查Container App Environment..." -ForegroundColor Yellow
-$caEnvs = az containerapp env list --resource-group $ResourceGroupName | ConvertFrom-Json
-if ($caEnvs.Count -eq 0) {
-    Write-Host "✗ 警告: 未找到Container App Environment" -ForegroundColor Yellow
-} else {
-    $caEnv = $caEnvs[0]
-    Write-Host "✓ Container App Environment found: $($caEnv.name)" -ForegroundColor Green
-    Write-Host "  资源ID: $($caEnv.id)"
-    Write-Host "  静态IP: $($caEnv.properties.staticIp)"
-}
-
-# Check Managed Identities
-Write-Host ""
-Write-Host "检查托管身份..." -ForegroundColor Yellow
-$identities = az identity list --resource-group $ResourceGroupName | ConvertFrom-Json
-if ($identities.Count -eq 0) {
-    Write-Host "✗ 警告: 未找到托管身份" -ForegroundColor Yellow
-} else {
-    foreach ($identity in $identities) {
-        Write-Host "✓ 托管身份: $($identity.name)" -ForegroundColor Green
-        Write-Host "  客户端ID: $($identity.clientId)"
-        Write-Host "  主体ID: $($identity.principalId)"
+    $healthUrl = "https://$($func.defaultHostName)/api/health"
+    try {
+        $healthResponse = Invoke-RestMethod -Method Get -Uri $healthUrl -TimeoutSec 15
+        Write-Host "  ✓ Health endpoint reachable: $healthUrl" -ForegroundColor Green
+        if ($healthResponse.status) {
+            Write-Host "  Health status: $($healthResponse.status)"
+        }
+    } catch {
+        Write-Host "  ⚠ Health endpoint check failed: $healthUrl" -ForegroundColor Yellow
     }
 }
 
-# Check Private DNS Zones
+# Static Web App
 Write-Host ""
-Write-Host "检查私有DNS区域..." -ForegroundColor Yellow
-$dnsZones = az network private-dns zone list --resource-group $ResourceGroupName | ConvertFrom-Json
-if ($dnsZones.Count -eq 0) {
-    Write-Host "✗ 警告: 未找到私有DNS区域" -ForegroundColor Yellow
+Write-Host "检查 Azure Static Web Apps..." -ForegroundColor Yellow
+$staticWebApps = az staticwebapp list --resource-group $ResourceGroupName | ConvertFrom-Json
+if (!$staticWebApps -or $staticWebApps.Count -eq 0) {
+    Write-Host "✗ 警告: 未找到 Static Web App" -ForegroundColor Yellow
 } else {
-    Write-Host "✓ 私有DNS区域找到:" -ForegroundColor Green
-    foreach ($zone in $dnsZones) {
-        Write-Host "  - $($zone.name)"
+    $swa = $staticWebApps[0]
+    Write-Host "✓ Static Web App found: $($swa.name)" -ForegroundColor Green
+    if ($swa.defaultHostname) {
+        Write-Host "  URL: https://$($swa.defaultHostname)"
+    }
+    Write-Host "  SKU: $($swa.sku.name)"
+}
+
+# Azure OpenAI / AI Services (Foundry handoff resource)
+Write-Host ""
+Write-Host "检查 Azure OpenAI / AI Services..." -ForegroundColor Yellow
+$cognitiveAccounts = az cognitiveservices account list --resource-group $ResourceGroupName | ConvertFrom-Json
+if (!$cognitiveAccounts -or $cognitiveAccounts.Count -eq 0) {
+    Write-Host "✗ 警告: 未找到 Cognitive Services 资源" -ForegroundColor Yellow
+} else {
+    foreach ($account in $cognitiveAccounts) {
+        Write-Host "✓ Cognitive resource: $($account.name)" -ForegroundColor Green
+        Write-Host "  Kind: $($account.kind)"
+        Write-Host "  Endpoint: $($account.properties.endpoint)"
     }
 }
 
-# Check RBAC Role Assignments
+# Entra app registrations cannot be fully validated by RG scope, so we only provide a reminder.
 Write-Host ""
-Write-Host "检查RBAC角色分配..." -ForegroundColor Yellow
-$roleAssignments = az role assignment list --resource-group $ResourceGroupName | ConvertFrom-Json
-if ($roleAssignments.Count -eq 0) {
-    Write-Host "✗ 警告: 未找到角色分配" -ForegroundColor Yellow
-} else {
-    Write-Host "✓ 找到 $($roleAssignments.Count) 个角色分配" -ForegroundColor Green
-}
+Write-Host "提示: Entra App Registration 请在 Portal 中确认 Redirect URI 与 API 权限。" -ForegroundColor Cyan
 
-# Check Deployment Status
+# Deployment status
 Write-Host ""
 Write-Host "检查最后的部署状态..." -ForegroundColor Yellow
 $deployments = az deployment group list --resource-group $ResourceGroupName --query "[0]" | ConvertFrom-Json
@@ -149,7 +128,7 @@ if ($deployments) {
     Write-Host "✓ 最后部署时间: $($deployments.properties.timestamp)" -ForegroundColor Green
     Write-Host "  部署名称: $($deployments.name)"
     Write-Host "  部署状态: $($deployments.properties.provisioningState)"
-    
+
     if ($deployments.properties.provisioningState -eq "Succeeded") {
         Write-Host "  ✓ 部署成功" -ForegroundColor Green
     } else {
@@ -157,28 +136,22 @@ if ($deployments) {
     }
 }
 
-# Generate Summary Report
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Green
 Write-Host "验证总结" -ForegroundColor Green
 Write-Host "==========================================" -ForegroundColor Green
 
 $resourceCounts = [ordered]@{
-    "Virtual Networks" = ($vnets.Count ?? 0)
-    "PostgreSQL Servers" = ($pgServers.Count ?? 0)
-    "Databases" = ($databases.Count ?? 0)
-    "Container Registries" = ($registries.Count ?? 0)
-    "Container App Environments" = ($caEnvs.Count ?? 0)
-    "Managed Identities" = ($identities.Count ?? 0)
-    "Private DNS Zones" = ($dnsZones.Count ?? 0)
-    "Role Assignments" = ($roleAssignments.Count ?? 0)
+    "Cosmos DB Accounts" = ($cosmosAccounts.Count ?? 0)
+    "Function Apps" = ($functionApps.Count ?? 0)
+    "Static Web Apps" = ($staticWebApps.Count ?? 0)
+    "Cognitive Services" = ($cognitiveAccounts.Count ?? 0)
 }
 
 foreach ($resource in $resourceCounts.GetEnumerator()) {
     Write-Host "$($resource.Key): $($resource.Value)" -ForegroundColor Cyan
 }
 
-# Create summary file
 $summary = @{
     timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     subscriptionId = $subscription.id
@@ -195,8 +168,7 @@ Write-Host ""
 Write-Host "==========================================" -ForegroundColor Green
 Write-Host "后续步骤" -ForegroundColor Green
 Write-Host "==========================================" -ForegroundColor Green
-Write-Host "1. 配置PostgreSQL Entra ID认证"
-Write-Host "2. 启动 API 服务并自动初始化数据库表"
-Write-Host "3. 部署Container App并配置Entra ID认证"
-Write-Host "4. 测试Container App与PostgreSQL的连接"
+Write-Host "1. 运行 Function 与 SWA 的端到端联调"
+Write-Host "2. 在 Foundry 中完成 Agent 与工具绑定"
+Write-Host "3. 验证日历扫描定时任务与自动建 Todo 流程"
 Write-Host ""

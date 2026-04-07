@@ -1,503 +1,289 @@
-# Todo Management Deployment Guide
+# Todo Management v3 Deployment Guide
 
 [English](DEPLOY_GUIDE.md) | [简体中文](DEPLOY_GUIDE-zh_CN.md) | [日本語](DEPLOY_GUIDE-ja_JP.md)
 
-This document explains the full process, in English, from creating a repository from the GitHub template to deploying the application to Azure.
-
-Estimated time: about 30 to 40 minutes.
-
----
+Complete deployment guide from GitHub template to live Azure application. Estimated: 45-60 minutes.
 
 ## Prerequisites
 
-- Azure subscription permissions: `Owner`, or `Contributor` plus `User Access Administrator`
-- Permission in Microsoft Entra ID to create app registrations
+- Azure subscription (Owner or Contributor + User Access Administrator)
+- Microsoft Entra ID app registration permission
 - GitHub account
-- Git installed
-- Internet access
+- Azure CLI, PowerShell 7+, Git installed
+- Node 18+, npm installed
 
----
+## Step 1: Clone Repository from Template
 
-## Step 1. Create a Repository from the GitHub Template
+1. Open https://github.com/Liminghao0922/todomanagement
+2. Click **Use this template** → **Create new repository**
+3. Name: e.g. `my-todo-app`
+4. Visibility: Public or Private
+5. Click **Create repository from template**
 
-### 1.1 Open the template repository
+## Step 2: Prepare Azure Environment
 
-1. Open the following repository in GitHub, or use your own template repository:
-	 - URL: `https://github.com/Liminghao0922/todomanagement`
-
-### 1.2 Click "Use this template"
-
-1. Click the **Use this template** button at the top-right of the repository page.
-2. Select **Create a new repository**.
-3. Fill in the repository details:
-	 - **Repository name**: any name, for example `my-todo-app`
-	 - **Description**: optional, for example `My Todo Management App`
-	 - **Visibility**: choose `Public` or `Private`
-	 - **Include all branches**: leave unchecked
-4. Click **Create repository from template**.
-
----
-
-## Step 2. Open Azure Cloud Shell (PowerShell)
-
-### 2.1 Sign in to Azure Portal
-
-1. Open `https://portal.azure.com`
-2. Sign in with your Azure account
-
-### 2.2 Start Cloud Shell
-
-1. Click the **Cloud Shell** icon (`>_`) at the top of the Azure Portal.
-2. Wait for the terminal to start.
-3. Switch the shell to **PowerShell** if it opens in Bash mode.
-
-### 2.3 Verify the subscription
+### 2.1 Set subscription
 
 ```powershell
-# Show the current subscription
-az account show
-
-# Switch to a different subscription if needed
-az account set --subscription "<subscription-id>"
+az login
+az account list
+az account set --subscription "<your-subscription-id>"
 ```
 
----
-
-## Step 3. Download the Repository in Cloud Shell
-
-### 3.1 Clone the repository
+### 2.2 Create resource group
 
 ```powershell
-# Clone the repository
-git clone https://github.com/[your-username]/[your-repo-name].git
-cd [your-repo-name]
-
-# Confirm files are present
-ls
-# Expected output includes:
-# src/
-# infra/
-# docs/
-# README.md
+$rg = "rg-todomanagement-dev"
+$location = "japaneast"
+az group create --name $rg --location $location
 ```
 
-### 3.2 Pull the latest changes if you already edited locally
-
-If you already made local changes and pushed them before entering Cloud Shell, pull the latest version:
+### 2.3 Clone repo locally
 
 ```powershell
-git pull origin main
+git clone https://github.com/[username]/[repo].git
+cd [repo]
 ```
 
----
+## Step 3: Configure Infrastructure Parameters
 
-## Step 4. Review and Update Basic Settings
-
-### 4.1 Review the parameter file
-
-```powershell
-# Review the parameter file
-cat infra/parameters.json
-```
-
-Default `infra/parameters.json` content:
+Edit `infra/parameters.json`:
 
 ```json
-	{
-	"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
-	"contentVersion": "1.0.0.0",
-	"parameters": {
-		"location": {
-			"value": "japaneast"
-		},
-		"environment": {
-			"value": "dev"
-		},
-		"projectName": {
-			"value": "todomanagement"
-		},
-		"postgresqlVersion": {
-			"value": "17"
-		},
-		"postgresqlAdminUsername": {
-			"value": "postgres"
-		},
-		"postgresqlAdminPassword": {
-			"value": "Change@Me123!"
-		},
-		"vnetAddressPrefix": {
-			"value": "10.0.0.0/16"
-		},
-		"postgresSubnetPrefix": {
-			"value": "10.0.1.0/24"
-		},
-		"containerAppSubnetPrefix": {
-			"value": "10.0.2.0/24"
-		}
-	}
+{
+  "location": "japaneast",
+  "environment": "dev",
+  "projectName": "todomanagement",
+  "foundryAgentEndpoint": "",          // Fill after Foundry setup
+  "foundryAgentApiKey": "",             // Fill after Foundry setup
+  "graphTenantId": "",                  // Fill: your Entra tenant ID
+  "graphClientId": "",                  // Fill: Service Principal client ID
+  "graphClientSecret": ""               // Fill: Service Principal secret
 }
 ```
 
-### 4.2 Edit parameters in Cloud Shell if needed
-
+Get `graphTenantId`:
 ```powershell
-# Edit parameters.json in PowerShell
-$json = Get-Content infra/parameters.json | ConvertFrom-Json
-$json.parameters.location.value = "japaneast"
-$json.parameters.environment.value = "handson"
-$json.parameters.projectName.value = "mytodoapp001"
-$json.parameters.postgresqlAdminPassword.value = "YourStrongPassword@123"
-$json | ConvertTo-Json | Set-Content infra/parameters.json
+az account show --query tenantId -o tsv
 ```
 
-Important values to review:
-
-| Setting | Description | Example |
-| --- | --- | --- |
-| `location` | Azure region | `japaneast`, `eastus`, `westeurope` |
-| `environment` | Environment identifier | `dev`, `staging`, `prod` |
-| `projectName` | Resource name prefix | `myapp`, `mycompany-todo` |
-| `postgresqlAdminPassword` | PostgreSQL admin password | `Str0ng@Password2024!` |
-
-### 4.3 PostgreSQL password note
-
-- `postgresqlAdminPassword` is required only when the PostgreSQL server is initially created.
-- The application itself uses a user-assigned managed identity (UAI) for PostgreSQL access.
-- The application does not use a stored runtime database password.
-- The password should still meet strong password requirements.
-
----
-
-## Step 5. Deploy the Infrastructure
-
-### 5.1 Set local variables
+## Step 4: Deploy Infrastructure (Bicep)
 
 ```powershell
-# Set variables
-$resourceGroupName = "rg-todomanagement-dev"
-$location = "japaneast"
-```
-
-### 5.2 Run the deployment script
-
-```powershell
-# Move to the infra directory
 cd infra
 
-# Run the PowerShell deployment script
-# In local Windows PowerShell, you may need:
-# Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+# Review the deployment
+az deployment group validate \
+  --resource-group $rg \
+  --template-file main.bicep \
+  --parameters parameters.json
 
-.\deploy.ps1 -ResourceGroupName $resourceGroupName -Location $location
+# Execute deployment (~10 min)
+az deployment group create \
+  --resource-group $rg \
+  --template-file main.bicep \
+  --parameters parameters.json
+
+# Save outputs (detailed below)
+az deployment group show \
+  --resource-group $rg \
+  --name main \
+  --query properties.outputs
 ```
 
-> In Azure Cloud Shell PowerShell, execution policy is already configured, so the script can usually run directly.
+### Key Outputs to Record
 
-### 5.3 Record deployment outputs
+```
+- functionAppName
+- functionAppUrl (e.g., https://func-todomanagement-xxxxx.azurewebsites.net)
+- staticWebAppName
+- staticWebAppUrl (e.g., https://[swa].azurestaticapps.net)
+- cosmosEndpoint
+- cosmosAccountName
+- appRegistrationClientId (Entra app for frontend)
+- tenantId
+- foundryResourceName
+```
 
-When `deploy.ps1` completes, record the output values.
+## Step 5: Create Entra ID App Registration (Frontend)
 
 ```powershell
-# Sample output:
-==========================================
-Infrastructure Details
-==========================================
-PostgreSQL Server: postgres-todomanagement-4eg3h7exlf4p6
-PostgreSQL Hostname: postgres-todomanagement-4eg3h7exlf4p6.postgres.database.azure.com
-Container Registry Login Server: acrtodomanagement4eg3h7exlf4p6.azurecr.io
-Container Registry Name: acrtodomanagement4eg3h7exlf4p6
-Container App Environment: cae-todomanagement-dev
-Database Name: tododb
-API_URL: https://todomanagement-api.internal.calmhill-4a670c14.japaneast.azurecontainerapps.io
-WEB_URL: https://todomanagement-web.calmhill-4a670c14.japaneast.azurecontainerapps.io
+# Create app registration
+$appName = "todo-management-web"
+$app = az ad app create --display-name $appName | ConvertFrom-Json
+$appId = $app.appId
 
-Web App Authentication:
-	AZURE_CLIENT_ID: xxxxxxxx-1338-4d64-a90c-19ae2cc9eff9
-	AZURE_TENANT_ID: xxxxxxxx-b5a9-466f-xxxx-d14b03f7ae76
-User Assigned Identity:
-	USER_ASSIGNED_IDENTITY_CLIENT_ID: xxxxxxxx-239e-4e1b-b759-5e601fcc4d8a
-	USER_ASSIGNED_IDENTITY_RESOURCE_ID: /subscriptions/xxxxxxxx-c1ec-xxxx-9ee7-22103870844b/resourceGroups/rg-todomanagement-xxxxxxxx/providers/Microsoft.ManagedIdentity/userAssignedIdentities/uai-todomanagement-dev
-	USER_ASSIGNED_IDENTITY_NAME: uai-todomanagement-dev
+# Add web platform
+$replyUrls = @(
+  "https://[your-swa-url]/"
+  "http://localhost:5173/"
+)
+az ad app update --id $appId `
+  --reply-urls $replyUrls
 
-==========================================
-Next Steps:
-	1. Configure GitHub Actions for CI/CD
+# Add permissions: User.Read, Calendar.Read.All
+az ad app permission add --id $appId \
+  --api 00000003-0000-0000-c000-000000000000 \
+  --api-permissions e1fe6dd8-ba31-4d61-89e6-40ba127554c7=Scope 570282fd-fa5c-430b-a940-f708cd10ae6e=Scope
 
+# Grant admin consent
+$servicePrincipal = az ad sp create --id $appId | ConvertFrom-Json
+az ad app permission admin-consent --id $appId
 
-==========================================
-Deployment Completed!
-==========================================
+echo "App Registration ID: $appId"
 ```
 
----
-
-## Step 6. Create a Service Principal and Azure Credentials for GitHub Actions
-
-> Permission note:
-> - This repository creates a Microsoft Graph `applications` resource in `infra/main.bicep`.
-> - It also creates an Azure RBAC role assignment for ACR access.
-> - Azure-side permissions therefore need to be `Owner`, or `Contributor` plus `User Access Administrator`.
-> - The deploying identity must also be allowed to create app registrations in Microsoft Entra ID. If self-service app registration is disabled in the tenant, use an identity with `Application Administrator`, `Cloud Application Administrator`, or equivalent directory permissions.
-
-### 6.1 Create the service principal in Cloud Shell
-
-Run the following:
+## Step 6: Create Service Principal for Graph API (Calendar Scan)
 
 ```powershell
-# Set variables
-$subscriptionId = $(az account show --query id -o tsv)
-$spName = "github-todomanagement-ci"
+# Create service principal for backend
+$spName = "todo-management-backend"
+$sp = az ad sp create-for-rbac --name $spName --role Contributor | ConvertFrom-Json
 
-# Create the service principal
-$sp = az ad sp create-for-rbac `
-	--name $spName `
-	--role "Owner" `
-	--scopes "/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName" `
-	--json-auth | ConvertFrom-Json
+# Extract credentials
+$graph_tenant_id = $sp.tenant
+$graph_client_id = $sp.clientId
+$graph_client_secret = $sp.password
 
-# Print JSON output for later use
-$sp | ConvertTo-Json
+# Grant Graph API permissions for Calendars.Read
+az ad app permission add --id $graph_client_id \
+  --api 00000003-0000-0000-c000-000000000000 \
+  --api-permissions 798ee544-9d2d-430c-9da2-d3a3b914dfd4=Role
+
+# Grant admin consent
+az ad app permission admin-consent --id $graph_client_id
+
+echo "Backend SP Client ID: $graph_client_id"
+echo "Backend SP Tenant: $graph_tenant_id"
 ```
 
-### 6.2 Save the JSON output
+## Step 7: Update Infrastructure Parameters (Part 2)
 
-Copy the output JSON and keep it for the next step:
+Update `infra/parameters.json` with Entra values:
 
 ```json
 {
-	"clientId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-	"clientSecret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-	"subscriptionId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-	"tenantId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-	...
+  "graphTenantId": "[value from Step 6]",
+  "graphClientId": "[value from Step 6]",
+  "graphClientSecret": "[value from Step 6]"
 }
 ```
 
----
-
-## Step 7. Configure GitHub Secrets and Variables
-
-### 7.1 Open the repository settings
-
-1. Open your GitHub repository.
-2. Click **Settings** -> **Secrets and variables** -> **Actions**.
-
-![1775016195315](images/DEPLOY_GUIDE-ja_JP/1775016195315.png)
-
-### 7.2 Add the secret
-
-Click **New repository secret**.
-
-Set:
-- **Name**: `AZURE_CREDENTIALS`
-- **Value**: paste the full JSON output from Step 6.1
-
-```json
-{
-	"clientId": "...",
-	"clientSecret": "...",
-	"subscriptionId": "...",
-	"tenantId": "...",
-	...
-}
-```
-
-Click **Add secret**.
-
-![1775017571109](images/DEPLOY_GUIDE-ja_JP/1775017571109.png)
-
-### 7.3 Add repository variables
-
-Click **Settings** -> **Secrets and variables** -> **Actions** again, then add the following variables:
-
-| Variable Name | Value | Description |
-| --- | --- | --- |
-| `ACR_NAME` | `acrtodomanagementxxxxx` | From deployment output |
-| `RESOURCE_GROUP` | `rg-todomanagement-dev` | From deployment output |
-| `CONTAINER_APP_ENVIRONMENT` | `cae-[projectName]-[environment]` | From `Container App Environment` output; used by workflow `--environment` |
-| `POSTGRES_SERVER` | `postgres-todomanagement-xxxxx.postgres.database.azure.com` | PostgreSQL FQDN from deployment output |
-| `DATABASE_TYPE` | `postgresql` | Force API to use PostgreSQL |
-| `POSTGRES_DB` | `tododb` | Default database name |
-| `POSTGRES_USER` | `uai-<project>-<env>` | Microsoft Entra ID / UAI principal name, not `postgres` |
-| `AZURE_CLIENT_ID` | `[Microsoft Entra ID App ID]` | From Azure Portal |
-| `AZURE_TENANT_ID` | `[Tenant ID]` | From Azure Portal |
-| `AZURE_REDIRECT_URI` | `https://[web-app-url]` | Retrieve after deployment |
-| `API_PROXY_TARGET` | `https://[api-app-url]` | Reverse proxy target from Web to internal API Container App |
-| `USER_ASSIGNED_IDENTITY_CLIENT_ID` | `[UAI Client ID]` | From deployment output |
-| `USER_ASSIGNED_IDENTITY_RESOURCE_ID` | `/subscriptions/.../userAssignedIdentities/...` | From deployment output; used by workflow `--registry-identity` |
-
-Notes:
-
-- Web Container App runtime only needs `API_PROXY_TARGET`.
-- `CONTAINER_APP_ENVIRONMENT` is used by both API and Web workflows in `az containerapp up --environment`.
-- `USER_ASSIGNED_IDENTITY_CLIENT_ID` is used by the API Container App to acquire PostgreSQL tokens with Microsoft Entra ID.
-- `USER_ASSIGNED_IDENTITY_RESOURCE_ID` is used only during GitHub Actions deployment and is not needed inside the application container.
-
-How to add them:
-
-1. Open the **Variables** tab
-2. Click **New repository variable**
-3. Enter the variable name in **Name**
-4. Enter the value in **Value**
-5. Click **Add variable**
-
-![1775016383501](images/DEPLOY_GUIDE-ja_JP/1775016383501.png)
-
----
-
-## Step 8. Copy and Enable GitHub Actions Workflow Files
-
-### 8.1 Copy workflow template files
-
-In this template repository, CI/CD workflow files use the `.template` suffix. This prevents workflows from running automatically in the source template repository.
-
-Run the following locally:
-
-```bash
-# Copy workflow files and remove the template suffix
-cd ..
-cp .github/workflows/build-deploy-web.yml.template .github/workflows/build-deploy-web.yml
-cp .github/workflows/build-deploy-api.yml.template .github/workflows/build-deploy-api.yml
-
-# Verify the copied files
-ls -la .github/workflows/
-
-# Expected output:
-# build-deploy-web.yml
-# build-deploy-web.yml.template
-# build-deploy-api.yml
-# build-deploy-api.yml.template
-```
-
-Windows PowerShell version:
+Deploy again to inject these values into Function App:
 
 ```powershell
-Copy-Item ".github/workflows/build-deploy-web.yml.template" ".github/workflows/build-deploy-web.yml"
-Copy-Item ".github/workflows/build-deploy-api.yml.template" ".github/workflows/build-deploy-api.yml"
-
-Get-ChildItem ".github/workflows/"
+az deployment group create \
+  --resource-group $rg \
+  --template-file main.bicep \
+  --parameters parameters.json
 ```
 
-### 8.2 Why templates are used
-
-- Prevent accidental workflow runs in the source template repository
-- Make workflow activation an explicit user action
-- Allow users to customize workflow files before committing them
-
----
-
-## Step 9. Commit and Push Your Changes
-
-### 9.1 Review local changes
-
-Run locally:
-
-```bash
-# Review local changes
-git status
-
-# Example output:
-# On branch main
-# Changes not staged for commit:
-#   modified: infra/parameters.json
-```
-
-### 9.2 Commit and push
-
-```bash
-# Stage the changes, including workflow files
-git add .
-
-# Commit
-git commit -m "Enable GitHub Actions workflows and configure infrastructure parameters"
-
-# Push to main
-git push origin main
-```
-
-Check the result:
-
-```bash
-git log --oneline
-```
-
----
-
-## Step 10. Run and Monitor GitHub Actions
-
-### 10.1 Open the Actions tab
-
-1. Open the **Actions** tab in your GitHub repository.
-2. Confirm the following workflows are shown:
-	 - `Build and Deploy API to ACR`
-	 - `Build and Deploy Web to ACR`
-
-### 10.2 Wait for workflow completion
-
-Expected triggers:
-
-- A push to `main`
-- Changes under `src/api/` or `.github/workflows/build-deploy-api.yml` trigger the API workflow
-- Changes under `src/web/` or `.github/workflows/build-deploy-web.yml` trigger the Web workflow
-
-### 10.3 Check workflow status
-
-Verify these steps succeed:
-
-- Checkout code
-- Log in to Azure
-- Build and push image to ACR
-- Deploy to Container App
-
-Typical runtime is about 5 to 10 minutes each for API and Web.
-
-### 10.4 Troubleshoot failed runs
-
-Common issues include:
-
-- `AZURE_CREDENTIALS` is missing
-- `RESOURCE_GROUP` is wrong
-- `CONTAINER_APP_ENVIRONMENT` does not match the deployed environment
-
----
-
-## Step 11. Access and Validate the Web Application
-
-### 11.1 Get the web app URL
-
-Run in Cloud Shell:
+## Step 8: Deploy Function Code
 
 ```powershell
-az containerapp show `
-	-n todomanagement-web `
-	-g $resourceGroupName `
-	--query "properties.configuration.ingress.fqdn" `
-	-o tsv
+cd ../src/api
 
-# Example output:
-# todomanagement-web.abc123def.japaneast.azurecontainerapps.io
+# Prepare
+copy local.settings.example.json local.settings.json
+
+# Install dependencies
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+
+# Local test (optional)
+func start
+# Health check: http://localhost:7071/api/health
+
+# Deploy to Azure
+func azure functionapp publish [functionAppName] --build remote
 ```
 
-Full URL:
+## Step 9: Deploy Frontend (Static Web Apps)
 
+```powershell
+cd ../web
+
+# Build
+npm install
+npm run build
+# Output: dist/
+
+# Deploy to Static Web Apps
+az staticwebapp upload \
+  --name [staticWebAppName] \
+  --source ./dist
 ```
-https://todomanagement-web.abc123def.japaneast.azurecontainerapps.io
+
+## Step 10: Configure Foundry Agent
+
+1. Navigate to Azure Portal → AI Foundry resource
+2. Open web UI
+3. Create a new **Agent project**
+4. Configure:
+   - **Model**: gpt-4o-mini (from your Azure OpenAI deployment)
+   - **System prompt**: Define agent behavior
+   - **Built-in tools**: Enable Microsoft Graph + Cosmos DB queries
+   - **Custom tool**: Add endpoint POST `/api/tools/extract-action-items`
+     - Input: `{ "meeting_text": "..." }`
+     - Output: `{ "action_items": [...], "count": N }`
+
+5. Update `foundry-agent-config.json` with:
+   ```json
+   {
+     "agentName": "todo-assistant",
+     "model": "gpt-4o-mini",
+     "toolsEndpoint": "https://[functionAppUrl]/api/tools/extract-action-items",
+     ...
+   }
+   ```
+
+6. Update `infra/parameters.json` with Foundry endpoint & API key, redeploy
+
+## Step 11: Validate Deployment
+
+```powershell
+cd ../../infra
+.\validate-deployment.ps1 -ResourceGroupName $rg
+
+# Expected checks:
+# ✓ Cosmos DB Accounts: 1
+# ✓ Function Apps: 1
+# ✓ Static Web Apps: 1
+# ✓ Cognitive Services: 1
+# ✓ Health endpoint reachable
 ```
 
-### 11.2 Open the application in a browser
+## Step 12: Test Application
 
-1. Copy the URL above into your browser address bar
-2. Press **Enter**
-3. Confirm the Todo Management application loads
+1. Open Static Web App URL: `https://[swa].azurestaticapps.net`
+2. Sign in with Microsoft Entra ID
+3. Create a todo: POST /api/todos
+4. Search todos: GET /api/todos?search=...
+5. Chat with Foundry agent
+6. Verify calendar scan (check logs in Function App)
 
-### 11.3 Validate functionality
+## Troubleshooting
 
-- Click the **Login** button
-- Sign in with Microsoft Entra ID
-- Confirm the Todo list is shown
-- Confirm you can create, edit, and delete Todo items
+### Function App returns 401
 
-Enjoy the deployment.
+- Check Entra ID application permissions
+- Verify `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID`, `GRAPH_CLIENT_SECRET` in Function settings
 
-Created: 2026-04-02
-Version: 1.0
+### Cosmos DB returns permission error
+
+- Verify Function managed identity has Cosmos Data Contributor role
+- Check partition key `/owner_id` in queries
+
+### Static Web App shows blank page
+
+- Run: `npm run build`
+- Verify `dist/` folder has `index.html`
+- Check SWA deployment logs
+
+### Meeting text extraction returns empty
+
+- Verify GraphAPI bearer token generation succeeds
+- Check `GRAPH_TENANT_ID` and service principal permissions
+
+For more details see [docs/ARCHITECTURE_GUIDE.md](../docs/ARCHITECTURE_GUIDE.md).

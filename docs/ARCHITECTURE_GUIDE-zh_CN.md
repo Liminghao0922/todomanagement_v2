@@ -1,54 +1,163 @@
-# 完整基础设施架构指南
+# 架构指南 v3 - Azure Functions + Cosmos DB + Static Web Apps
 
 [English](ARCHITECTURE_GUIDE.md) | [简体中文](ARCHITECTURE_GUIDE-zh_CN.md) | [日本語](ARCHITECTURE_GUIDE-ja_JP.md)
 
-## 系统总览
+## 系统概览
 
-当前基础设施采用**私有、安全、基于身份**的架构，目标是实现零明文凭据。
+v3 架构采用**云原生、无服务器、基于身份**的设计，集成以下组件：
 
-![Architecture](../images/01.Architecture.png)
+- **Azure Functions** - 后端 API 和定时作业
+- **Azure Cosmos DB** - NoSQL 容器 + Gremlin 图表
+- **Azure Static Web Apps** - Vue 前端
+- **Azure OpenAI** - 向量嵌入和聊天模型
+- **Azure AI Foundry** - 内置工具（Graph + Cosmos）与自定义工具支持
+- **Microsoft Entra ID** - 跨全部服务的身份认证与授权
 
-## 核心设计
-- 所有工作负载运行在 Azure 私有网络内
-- ACR 与 PostgreSQL 使用私有访问与私有 DNS
-- 容器应用通过用户分配托管标识（UAI）访问数据库和镜像仓库
-- CI/CD 通过 GitHub Actions 完成构建与滚动部署
+### 高级架构
 
-## 核心组件
-- `todomanagement-api`：FastAPI 后端，负责 Todo、项目与身份相关接口
-- `todomanagement-web`：Vue 3 前端，通过同源 `/api` 与后端通信
-- PostgreSQL Flexible Server：作为生产数据库，使用 Microsoft Entra ID 认证
-- Azure Container Registry：存储 API 与 Web 容器镜像
-- User Assigned Identity：用于容器应用拉取镜像和访问数据库
+```
+┌────────────────────────────────────────────────────────────┐
+│          Azure 云环境                                      │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│  用户浏览器
+│    ↓ MSAL Entra ID 认证
+│
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ Azure Static Web Apps (SWA)                      │   │
+│  │ - Vue 3 + Vite 前端                             │   │
+│  │ - `/api` 代理 → Function App                    │   │
+│  └──────────────┬───────────────────────────────────┘   │
+│                 ↓
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ Azure Functions (Python 3.11)                   │   │
+│  │ - GET/POST/PATCH/DELETE /todos                 │   │
+│  │ - POST /chat (Foundry 代理)                     │   │
+│  │ - POST /tools/extract-action-items (自定义)    │   │
+│  │ - Timer: 0 0 */6 * * * (日历扫描)              │   │
+│  └──────────────┬───────────────────────────────────┘   │
+│                 ↓
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ Azure Cosmos DB                                 │   │
+│  │ - NoSQL: todos、owners、projects 容器           │   │
+│  │ - Gremlin: todo-graph（关系图谱）              │   │
+│  │ - Vector: embedding 字段（向量搜索）           │   │
+│  │ - Serverless 计费模式                         │   │
+│  └──────────────────────────────────────────────────┘   │
+│
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ Azure OpenAI Service                            │   │
+│  │ - gpt-4o-mini（聊天 + 提取）                   │   │
+│  │ - text-embedding-3-small（向量）               │   │
+│  └──────────────────────────────────────────────────┘   │
+│
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ Azure AI Foundry                                │   │
+│  │ - Web UI Agent（gpt-4o-mini 驱动）             │   │
+│  │ - 内置: MS Graph + Cosmos 查询工具              │   │
+│  │ - 自定义工具: /api/tools/extract-action-items  │   │
+│  └──────────────────────────────────────────────────┘   │
+│
+└────────────────────────────────────────────────────────────┘
+```
 
-## 身份与认证流
-- API 容器启动后通过 UAI 获取数据库访问令牌
-- Web 容器在构建期注入 Entra 配置，在运行期只需要 `API_PROXY_TARGET`
-- GitHub Actions 使用 `AZURE_CREDENTIALS` 登录 Azure，并通过模板工作流部署 Container Apps
+## 数据流
 
-## 请求数据流
-1. 浏览器访问 Web Container App
-2. 前端通过同源 `/api` 调用后端
-3. Web Container App 将 `/api` 代理到 internal API Container App
-4. API Container App 使用 UAI 获取 PostgreSQL 访问令牌并执行查询
-5. 响应通过 HTTPS 返回给浏览器
+### 1. SPA → Functions API
 
-## 安全模型
-- 不在代码或环境中硬编码数据库密码
-- 以 Microsoft Entra ID 与令牌认证替代用户名/密码
-- 使用最小权限（例如 ACR 的 AcrPull）
-- 敏感访问通过 RBAC 控制并可审计
+```
+用户
+  ↓ MSAL 认证（Entra ID 登录）
+  ↓
+Vue 3 SPA 前端
+  ├─ GET /api/health
+  ├─ GET /api/todos
+  ├─ POST /api/todos（创建）
+  ├─ PATCH /api/todos/{id}（更新）
+  ├─ DELETE /api/todos/{id}（删除）
+  ├─ POST /api/chat（Foundry 聊天）
+  └─ POST /api/tools/extract-action-items
+       ↓
+  Azure Functions
+       ↓
+  Cosmos DB / OpenAI / Graph API
+```
 
-## RBAC 概览
-- UAI 需要对 ACR 具有镜像拉取权限
-- PostgreSQL 中授予对应 Entra 主体最小化数据库权限
-- GitHub Actions 使用具备目标资源组部署权限的 Service Principal
+### 2. Functions → Cosmos NoSQL
 
-## 建议阅读顺序
-1. `README-zh_CN.md`
-2. `handson/DEPLOY_GUIDE-zh_CN.md`
-3. `infra/README.md`
-4. `.github/workflows/*.yml.template`
+```
+接收 POST /api/todos
+  ↓
+1. 通过 OpenAI 生成向量嵌入
+   text-embedding-3-small(title + description)
+2. 创建 Todo 文档
+   { id, owner_id, title, description, embedding: [...] }
+3. Upsert 到 Cosmos NoSQL "todos" 容器
+4. 同步到 Gremlin 图表
+   - 创建顶点（todo 节点）
+   - 创建边（BLOCKED_BY、PRECEDES、SUBTASK_OF、SIMILAR_TO）
+```
 
-## 说明
-该文档为中文版本摘要。完整细节请参考英文主文档：`docs/ARCHITECTURE_GUIDE.md`。
+### 3. 定时任务: 日历扫描
+
+```
+Timer: 每 6 小时触发一次
+  ↓
+1. 查询所有所有者（从 Cosmos 获取）
+2. 对于每个所有者：
+   - Graph API 认证（client credentials）
+   - 调用 calendarView API
+   - 抽取会议内容
+   - OpenAI 提取行动项
+   - 去重后创建 Todo
+   - 同步到 Gremlin 图表
+```
+
+### 4. Foundry Agent 集成
+
+```
+用户：在 Foundry UI 中输入查询
+  ↓
+Foundry Agent（gpt-4o-mini 驱动）
+  ├─ 内置 MS Graph 工具
+  │  └─ 日历 API → 获取事件
+  ├─ 内置 Cosmos 工具
+  │  ├─ SQL 查询 → NoSQL 数据
+  │  └─ Gremlin 查询 → 关联 todos
+  └─ 自定义工具
+     └─ /api/tools/extract-action-items
+        → 会议文本 → 行动项列表
+  ↓
+工具结果链式处理 → 生成自然语言响应
+  ↓
+在 Foundry UI 显示
+```
+
+## Entra ID 与认证
+
+### Web 应用（SPA）
+
+- 平台: SPA（MSAL 浏览器）
+- 重定向 URI：`https://[swa].azurestaticapps.net/`
+- 范围：`User.Read`、`Calendars.Read`（委托）
+
+### Functions（托管标识）
+
+- 类型: 系统分配
+- 用于: Cosmos、OpenAI、Graph API 认证
+- 无需密钥（Entra ID 令牌自动获取）
+
+### Graph API（Service Principal）
+
+- 类型：应用注册（client secret）
+- 范围：`Calendars.Read`（应用级）
+- 日历扫描作业使用
+
+## 安全性
+
+- **零硬编码密钥**：运行时通过 Entra ID/Key Vault 解决
+- **Cosmos 分区化**：按 `/owner_id` 隔离数据
+- **HTTPS 全链路**：完全加密通信
+- **图表表达关系**：边定义 todos 的逻辑关系
+
+详见 [DEPLOY_GUIDE-zh_CN.md](../handson/DEPLOY_GUIDE-zh_CN.md)。
