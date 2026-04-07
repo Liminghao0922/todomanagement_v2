@@ -19,7 +19,7 @@ def _resolve_user_id(req: func.HttpRequest) -> str:
 
 
 @app.route(route="health", methods=["GET"])
-def health(_: func.HttpRequest) -> func.HttpResponse:
+def health(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse(
         body=json.dumps(
             {
