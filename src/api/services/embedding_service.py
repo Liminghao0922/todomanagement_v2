@@ -1,19 +1,18 @@
 import os
 from typing import List
 
-from openai import AzureOpenAI
-
-
-def _client() -> AzureOpenAI:
-    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
-    key = os.getenv("AZURE_OPENAI_KEY", "")
-    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
-    if not endpoint or not key:
-        raise RuntimeError("AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY are required")
-    return AzureOpenAI(azure_endpoint=endpoint, api_key=key, api_version=api_version)
+from services.foundry_service import _project_client
 
 
 def embed_text(text: str) -> List[float]:
-    model = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-3-small")
-    response = _client().embeddings.create(model=model, input=text)
+    endpoint = (
+        os.getenv("FOUNDRY_PROJECT_ENDPOINT", "").strip()
+        or os.getenv("FOUNDRY_AGENT_ENDPOINT", "").strip()
+    )
+    if not endpoint:
+        raise RuntimeError("FOUNDRY_PROJECT_ENDPOINT is required")
+
+    model = os.getenv("FOUNDRY_EMBEDDING_DEPLOYMENT", "text-embedding-3-small").strip()
+    openai_client = _project_client(endpoint).get_openai_client()
+    response = openai_client.embeddings.create(model=model, input=text)
     return response.data[0].embedding

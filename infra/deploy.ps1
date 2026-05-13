@@ -122,7 +122,7 @@ Write-Host "==========================================" -ForegroundColor Green
 Write-Host "Next Steps:" -ForegroundColor Yellow
 Write-Host "  1. Configure Foundry Agent in Azure AI Foundry Web UI"
 Write-Host "  2. Wire Foundry built-in tools (Graph + Cosmos)"
-Write-Host "  3. Add custom tool endpoint: /api/tools/extract-action-items"
+Write-Host "  3. Add custom tool endpoint: /api/tools/estimate-hours"
 Write-Host ""
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Green

@@ -428,3 +428,73 @@ src/web/.env.local
 src/web/.env.development
 src/api/venv/
 src/api/todos.db
+
+# Python virtual environments
+.venv/
+venv/
+ENV/
+env/
+.Python
+
+# Python build and package artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Python cache files (already covered but emphasized)
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Node.js specific
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# IDE and Editor files
+.idea/
+.vscode/settings.json.backup
+.vscode/launch.json.backup
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# OS specific
+Thumbs.db
+.windows-build-tools/
+.env
+
+# Temporary and log files
+tmp/
+temp/
+*.log
+*.out
+*.pid
+
+# Local Azure development
+local.settings.json
+*.local.json
+
+# macOS
+*.app
+.AppleDS_Store
+
+# Azurite (Azure Storage local emulator)
+__blobstorage__/
+__azurite_db_*.json

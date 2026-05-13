@@ -53,7 +53,7 @@ During local development, Vite proxies `/api` to local Functions. For production
 The standard deployment flow is:
 1. Deploy infrastructure from `infra/deploy.ps1`
 2. Record outputs for Function URL, SWA URL, Cosmos endpoint, Entra App ID, and Foundry resource
-3. Configure Azure AI Foundry agent in web UI using built-in Graph/Cosmos tools and custom tool endpoint `/api/tools/extract-action-items`
+3. Configure Azure AI Foundry agent in web UI using built-in Graph/Cosmos tools and custom tool endpoint `/api/tools/estimate-hours`
 4. Deploy Function code and Web static assets
 5. Validate Todo CRUD, AI extraction, and timer-based calendar scanning pipeline
 

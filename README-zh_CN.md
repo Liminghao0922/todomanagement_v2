@@ -54,7 +54,7 @@ npm run dev  # http://localhost:5173
 标准部署流程:
 1. 运行 `infra/deploy.ps1` 部署基础设施
 2. 记录 Function URL、SWA URL、Cosmos Endpoint、Entra App ID、Foundry 资源输出
-3. 在 Foundry Web UI 创建 Agent，接入内置 Graph/Cosmos 工具与 `/api/tools/extract-action-items`
+3. 在 Foundry Web UI 创建 Agent，接入内置 Graph/Cosmos 工具与 `/api/tools/estimate-hours`
 4. 部署 Function 代码与 Web 静态资源
 5. 验证 Todo CRUD、AI 抽取、定时扫描流程
 

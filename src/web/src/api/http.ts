@@ -38,6 +38,15 @@ const apiClient: AxiosInstance = axios.create({
 // 请求拦截器
 apiClient.interceptors.request.use(
   (config) => {
+    // 动态 import，避免循环依赖
+    try {
+      const { useAuthStore } = require('@/stores/authStore')
+      const authStore = useAuthStore()
+      if (authStore.userId) {
+        config.headers = config.headers || {}
+        config.headers['x-user-id'] = authStore.userId
+      }
+    } catch {}
     return config
   },
   (error) => Promise.reject(error)

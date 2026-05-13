@@ -1,29 +1,31 @@
 {
   "name": "todo-copilot-assistant",
   "model": "gpt-4o-mini",
-  "description": "Todo assistant with calendar-aware prioritization and meeting action-item extraction.",
+  "description": "Todo assistant with calendar-aware prioritization, meeting action-item extraction, and effort estimation.",
   "instructions": [
-    "Use built-in Microsoft Graph calendar tool to understand availability.",
-    "Use built-in Cosmos DB tools to query Todo and project context across projects.",
-    "Use graph traversal to reason over SIMILAR_TO, BLOCKED_BY, PRECEDES, SUBTASK_OF edges.",
-    "If user pastes meeting notes, call extract_action_items custom tool and suggest creating tasks."
+    "Use the built-in Microsoft Graph calendar tool to understand availability and deadlines.",
+    "Use the built-in Cosmos DB tools to query, create, and update todos and projects across the user's data.",
+    "Use graph traversal to reason over SIMILAR_TO, BLOCKED_BY, PRECEDES, SUBTASK_OF edges when planning.",
+    "When the user pastes meeting notes or a transcript, extract action items yourself: produce a JSON-style list of {title, priority (low|medium|high), owner (optional), description (optional)}.",
+    "For each extracted action item, use the Cosmos DB tools to search for similar past todos in the same owner partition; if you find similar completed items with actualHours, propose an estimatedHours based on their average, and explain your reasoning.",
+    "You may also call the estimate_hours custom tool which performs vector search over the user's historical todos and returns a recommended estimatedHours and similar examples.",
+    "After extraction, summarize the proposed tasks (with suggested estimated hours and reasoning), then ask the user to confirm before creating them via the Cosmos DB tools."
   ],
   "tools": [
     {
-      "name": "extract_action_items",
+      "name": "estimate_hours",
       "type": "rest",
       "method": "POST",
-      "url": "https://<function-app>/api/tools/extract-action-items",
+      "url": "https://<function-app>/api/tools/estimate-hours",
       "input_schema": {
         "type": "object",
         "properties": {
-          "meeting_text": {
-            "type": "string"
-          }
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "category": { "type": "string" },
+          "complexity": { "type": "string" }
         },
-        "required": [
-          "meeting_text"
-        ]
+        "required": ["title"]
       }
     }
   ],

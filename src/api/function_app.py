@@ -4,8 +4,7 @@ from datetime import datetime, timezone
 
 import azure.functions as func
 
-from functions import crud_todos, extract_action_items
-from functions.auto_scan_calendar import auto_scan_calendar_timer
+from functions import crud_owners, crud_projects, crud_todos, crud_conversations, estimate_hours
 from services.foundry_service import chat_with_foundry
 from services.graph_service import query_related
 
@@ -14,8 +13,21 @@ app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 
 def _resolve_user_id(req: func.HttpRequest) -> str:
-    # Use header/userId query fallback to keep compatibility while auth is evolving.
-    return req.headers.get("x-user-id") or req.params.get("userId") or "demo-user"
+    # Use header/query first, then JSON body to support calls that send userId in payload.
+    header_or_query = req.headers.get("x-user-id") or req.params.get("userId")
+    if header_or_query:
+        return header_or_query
+
+    try:
+        body = req.get_json()
+        if isinstance(body, dict):
+            body_user_id = (body.get("userId") or body.get("owner_id") or "").strip()
+            if body_user_id:
+                return body_user_id
+    except Exception:
+        pass
+
+    return "demo-user"
 
 
 @app.route(route="health", methods=["GET"])
@@ -42,6 +54,44 @@ def create_todo(req: func.HttpRequest) -> func.HttpResponse:
     return crud_todos.create_todo(req, _resolve_user_id(req))
 
 
+@app.route(route="generate-todos", methods=["POST"])
+def generate_todos(req: func.HttpRequest) -> func.HttpResponse:
+    return crud_todos.generate_todos(req, _resolve_user_id(req))
+
+
+@app.route(route="owners", methods=["POST"])
+def create_owner(req: func.HttpRequest) -> func.HttpResponse:
+    return crud_owners.create_owner(req)
+
+
+@app.route(route="projects", methods=["GET"])
+def list_projects(req: func.HttpRequest) -> func.HttpResponse:
+    return crud_projects.list_projects(req, _resolve_user_id(req))
+
+
+@app.route(route="projects", methods=["POST"])
+def create_project(req: func.HttpRequest) -> func.HttpResponse:
+    return crud_projects.create_project(req, _resolve_user_id(req))
+
+
+@app.route(route="projects/{project_id}", methods=["GET"])
+def get_project(req: func.HttpRequest) -> func.HttpResponse:
+    project_id = req.route_params.get("project_id", "")
+    return crud_projects.get_project(req, _resolve_user_id(req), project_id)
+
+
+@app.route(route="projects/{project_id}", methods=["PATCH"])
+def update_project(req: func.HttpRequest) -> func.HttpResponse:
+    project_id = req.route_params.get("project_id", "")
+    return crud_projects.update_project(req, _resolve_user_id(req), project_id)
+
+
+@app.route(route="projects/{project_id}", methods=["DELETE"])
+def delete_project(req: func.HttpRequest) -> func.HttpResponse:
+    project_id = req.route_params.get("project_id", "")
+    return crud_projects.delete_project(req, _resolve_user_id(req), project_id)
+
+
 @app.route(route="todos/{todo_id}", methods=["PATCH"])
 def update_todo(req: func.HttpRequest) -> func.HttpResponse:
     todo_id = req.route_params.get("todo_id", "")
@@ -54,9 +104,9 @@ def delete_todo(req: func.HttpRequest) -> func.HttpResponse:
     return crud_todos.delete_todo(_resolve_user_id(req), todo_id)
 
 
-@app.route(route="tools/extract-action-items", methods=["POST"])
-def tool_extract_action_items(req: func.HttpRequest) -> func.HttpResponse:
-    return extract_action_items.extract(req)
+@app.route(route="tools/estimate-hours", methods=["POST"])
+def tool_estimate_hours(req: func.HttpRequest) -> func.HttpResponse:
+    return estimate_hours.estimate(req, _resolve_user_id(req))
 
 
 @app.route(route="chat", methods=["POST"])
@@ -72,15 +122,54 @@ def chat(req: func.HttpRequest) -> func.HttpResponse:
                 status_code=400,
             )
 
-        result = chat_with_foundry(user_id, message)
-        code = 200 if "error" not in result else 502
-        return func.HttpResponse(json.dumps(result, ensure_ascii=False), mimetype="application/json", status_code=code)
+        conversation_id = (body.get("conversationId") or "").strip() or None
+        conversation_doc_id = (body.get("conversationDocId") or "").strip() or None
+        result = chat_with_foundry(user_id, message, conversation_id)
+
+        if "error" not in result:
+            # Persist messages to Cosmos DB asynchronously (best-effort)
+            try:
+                saved = crud_conversations.upsert_conversation(
+                    user_id=user_id,
+                    conversation_id=result["conversationId"],
+                    user_message=message,
+                    assistant_message=result.get("answer", ""),
+                    doc_id=conversation_doc_id,
+                )
+                result["conversationDocId"] = saved["id"]
+            except Exception as save_err:
+                logger.warning("Failed to persist conversation: %s", save_err)
+
+            return func.HttpResponse(json.dumps(result, ensure_ascii=False), mimetype="application/json", status_code=200)
+
+        # Keep local UX smooth: when Foundry is not configured, return 200 so frontend can show inline guidance.
+        if result.get("status") == "not_configured":
+            return func.HttpResponse(json.dumps(result, ensure_ascii=False), mimetype="application/json", status_code=200)
+
+        return func.HttpResponse(json.dumps(result, ensure_ascii=False), mimetype="application/json", status_code=502)
     except Exception as exc:
         return func.HttpResponse(
             json.dumps({"error": str(exc)}),
             mimetype="application/json",
             status_code=500,
         )
+
+
+@app.route(route="conversations", methods=["GET"])
+def list_conversations(req: func.HttpRequest) -> func.HttpResponse:
+    return crud_conversations.list_conversations(_resolve_user_id(req))
+
+
+@app.route(route="conversations/{doc_id}", methods=["GET"])
+def get_conversation(req: func.HttpRequest) -> func.HttpResponse:
+    doc_id = req.route_params.get("doc_id", "")
+    return crud_conversations.get_conversation(_resolve_user_id(req), doc_id)
+
+
+@app.route(route="conversations/{doc_id}", methods=["DELETE"])
+def delete_conversation(req: func.HttpRequest) -> func.HttpResponse:
+    doc_id = req.route_params.get("doc_id", "")
+    return crud_conversations.delete_conversation(_resolve_user_id(req), doc_id)
 
 
 @app.route(route="graph/related", methods=["GET"])
@@ -97,9 +186,3 @@ def graph_related(req: func.HttpRequest) -> func.HttpResponse:
 
     items = query_related(user_id, todo_id, relation)
     return func.HttpResponse(json.dumps({"items": items}, ensure_ascii=False), mimetype="application/json")
-
-
-# Timer trigger for automatic meeting action item extraction.
-@app.timer_trigger(schedule="0 0 */6 * * *", arg_name="timer", run_on_startup=False, use_monitor=True)
-def calendar_scan_job(timer: func.TimerRequest) -> None:
-    auto_scan_calendar_timer(timer)

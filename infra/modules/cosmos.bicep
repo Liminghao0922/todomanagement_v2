@@ -97,6 +97,22 @@ resource projects 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers
   }
 }
 
+resource conversations 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: sqlDb
+  name: 'conversations'
+  properties: {
+    resource: {
+      id: 'conversations'
+      partitionKey: {
+        paths: [
+          '/owner_id'
+        ]
+        kind: 'Hash'
+      }
+    }
+  }
+}
+
 resource gremlinDb 'Microsoft.DocumentDB/databaseAccounts/gremlinDatabases@2024-05-15' = {
   parent: cosmos
   name: 'todo-graph-db'

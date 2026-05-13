@@ -90,15 +90,30 @@
             </div>
           </div>
           <div class="form-row">
-            <input
-              v-model="newForm.estimatedHours"
-              type="number"
-              placeholder="Estimated Hours"
-              class="input"
-            />
+            <div class="estimate-input-wrapper">
+              <input
+                v-model="newForm.estimatedHours"
+                type="number"
+                step="0.1"
+                min="0"
+                placeholder="Estimated Hours"
+                class="input"
+              />
+              <button
+                type="button"
+                class="btn-estimate"
+                :disabled="!canEstimate"
+                :title="canEstimate ? 'Estimate from past similar todos' : 'Enter a title first to estimate hours'"
+                @click="openEstimateDialog"
+              >
+                ✨ Estimate
+              </button>
+            </div>
             <input
               v-model="newForm.actualHours"
               type="number"
+              step="0.1"
+              min="0"
               placeholder="Actual Hours"
               class="input"
             />
@@ -210,7 +225,7 @@
           :disabled="generatingTestData"
           class="btn btn-secondary"
         >
-          {{ generatingTestData ? '⏳ Generating...' : '🤖 Generate 2000 Test Todos' }}
+          {{ generatingTestData ? '⏳ Generating...' : '🤖 Generate 50 Test Todos' }}
         </button>
       </div>
 
@@ -404,11 +419,11 @@
         <div class="form-group form-row">
           <div>
             <label>Est. Hours</label>
-            <input v-model="editForm.estimatedHours" type="number" class="input" />
+            <input v-model="editForm.estimatedHours" type="number" step="0.1" min="0" class="input" />
           </div>
           <div>
             <label>Actual Hours</label>
-            <input v-model="editForm.actualHours" type="number" class="input" />
+            <input v-model="editForm.actualHours" type="number" step="0.1" min="0" class="input" />
           </div>
         </div>
         <div class="form-group">
@@ -422,6 +437,49 @@
       </form>
     </div>
   </div>
+
+  <!-- Estimate Hours Dialog -->
+  <div v-if="showEstimateDialog" class="modal-overlay" @click.self="closeEstimateDialog">
+    <div class="modal estimate-modal">
+      <h3>✨ Estimate Hours from Past Data</h3>
+
+      <div v-if="estimateLoading" class="estimate-loading">
+        <div class="spinner" />
+        <p>Searching past similar todos…</p>
+      </div>
+
+      <div v-else-if="estimateError" class="error-box">⚠️ {{ estimateError }}</div>
+
+      <div v-else-if="estimateResult && estimateResult.found" class="estimate-result">
+        <div class="estimate-headline">
+          <span class="estimate-value">{{ estimateResult.estimatedHours }}h</span>
+          <span class="estimate-range">range {{ estimateResult.minHours }}h – {{ estimateResult.maxHours }}h</span>
+        </div>
+        <p class="estimate-reason">{{ estimateResult.reasoning }}</p>
+        <div v-if="estimateResult.similarTodos?.length" class="estimate-samples">
+          <p class="samples-label">Based on:</p>
+          <ul>
+            <li v-for="s in estimateResult.similarTodos" :key="s.id">
+              <span class="sample-title">{{ s.title }}</span>
+              <span class="sample-hours">{{ s.actualHours }}h</span>
+              <span class="sample-sim">sim {{ (s.similarity * 100).toFixed(0) }}%</span>
+            </li>
+          </ul>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-primary" @click="applyEstimate">Apply {{ estimateResult.estimatedHours }}h</button>
+          <button class="btn btn-secondary" @click="closeEstimateDialog">Cancel</button>
+        </div>
+      </div>
+
+      <div v-else-if="estimateResult && !estimateResult.found" class="estimate-empty">
+        <p>{{ estimateResult.message || 'No similar past todos with recorded actual hours were found.' }}</p>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" @click="closeEstimateDialog">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -429,6 +487,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useTodoStore } from '@/stores/todoStore'
 import { useAuthStore } from '@/stores/authStore'
 import { getProjects } from '@/api/projects'
+import { estimateHours, type EstimateHoursResponse } from '@/api/ai'
 import AIAssistant from '@/components/AIAssistant.vue'
 import type { Todo, Project } from '@/types'
 
@@ -437,6 +496,52 @@ const authStore = useAuthStore()
 const loading = computed(() => todoStore.loading)
 const error = computed(() => todoStore.error)
 const todos = computed(() => todoStore.todos)
+
+// ── Estimate Hours Dialog ─────────────────────────────────
+const showEstimateDialog = ref(false)
+const estimateLoading = ref(false)
+const estimateError = ref('')
+const estimateResult = ref<EstimateHoursResponse | null>(null)
+const canEstimate = computed(() => (newForm.value.title || '').trim().length > 0)
+
+const openEstimateDialog = async () => {
+  const title = (newForm.value.title || '').trim()
+  const description = (newForm.value.description || '').trim()
+  if (!title) {
+    estimateError.value = 'Please enter a title first.'
+    showEstimateDialog.value = true
+    return
+  }
+  showEstimateDialog.value = true
+  estimateLoading.value = true
+  estimateError.value = ''
+  estimateResult.value = null
+  try {
+    estimateResult.value = await estimateHours({
+      title,
+      description,
+      category: newForm.value.category || undefined,
+      complexity: newForm.value.complexity || undefined,
+    })
+  } catch (err: any) {
+    estimateError.value = err?.message || 'Failed to estimate hours.'
+  } finally {
+    estimateLoading.value = false
+  }
+}
+
+const applyEstimate = () => {
+  if (estimateResult.value?.estimatedHours != null) {
+    newForm.value.estimatedHours = String(estimateResult.value.estimatedHours)
+  }
+  closeEstimateDialog()
+}
+
+const closeEstimateDialog = () => {
+  showEstimateDialog.value = false
+  estimateError.value = ''
+  estimateResult.value = null
+}
 
 // Projects list
 const projects = ref<Project[]>([])
@@ -792,10 +897,8 @@ const handleGenerateTestData = async () => {
     return
   }
 
-  const count = todos.length === 0 ? 100 : 2000
-  const message = count === 100 
-    ? 'Generate 100 test todos to get started?' 
-    : 'Generate 2000 test todos for current user? This may take a moment.'
+  const count = 50
+  const message = 'Generate 50 test todos (with auto-created project) for current user?'
   
   if (!confirm(message)) {
     return
@@ -813,7 +916,8 @@ const handleGenerateTestData = async () => {
     }
     
     const data = await response.json()
-    alert(`✅ Successfully generated ${data.createdCount} test todos!\nTime: ${data.timeSeconds}s`)
+    const projectInfo = data.projectCreated ? `\nProject: "${data.projectName}" (auto-created)` : ''
+    alert(`✅ Generated ${data.createdCount} todos (${data.seededHighImpact} high-impact)!\nTime: ${data.timeSeconds}s${projectInfo}`)
     
     // 重新加载数据
     await todoStore.fetchTodos()
@@ -1820,5 +1924,138 @@ const addCategoryIfNew = (category?: string) => {
   .stats {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Estimate hours: input + button + modal ── */
+.estimate-input-wrapper {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+.estimate-input-wrapper .input {
+  flex: 1;
+}
+.btn-estimate {
+  white-space: nowrap;
+  padding: 0 12px;
+  border: 1px solid #c7daf3;
+  background: linear-gradient(135deg, #f0f6ff 0%, #e8f1ff 100%);
+  color: #0f3d91;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.btn-estimate:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e2ecff 0%, #d6e6ff 100%);
+}
+.btn-estimate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f1f3f7;
+  color: #8a99b3;
+  border-color: #dde3ec;
+}
+
+.estimate-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 540px;
+  width: 92%;
+  max-height: 86vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+}
+.estimate-modal h3 {
+  margin: 0 0 1rem;
+  color: #173a67;
+}
+
+.estimate-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 0;
+  color: #5d7394;
+}
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e0e8f5;
+  border-top-color: #0078d4;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.estimate-headline {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.estimate-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #0f3d91;
+}
+.estimate-range {
+  color: #6884a5;
+  font-size: 0.9rem;
+}
+.estimate-reason {
+  color: #1f3757;
+  background: #f4f8ff;
+  border-left: 3px solid #0078d4;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 8px 0 16px;
+  font-size: 0.9rem;
+}
+
+.estimate-samples .samples-label {
+  font-weight: 600;
+  color: #557197;
+  font-size: 0.85rem;
+  margin: 8px 0 4px;
+}
+.estimate-samples ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+}
+.estimate-samples li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid #e6eef8;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+}
+.sample-title {
+  flex: 1;
+  color: #1f3757;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sample-hours {
+  color: #0f3d91;
+  font-weight: 600;
+}
+.sample-sim {
+  color: #8ca5c0;
+  font-size: 0.75rem;
+}
+
+.estimate-empty {
+  color: #6884a5;
+  padding: 8px 0;
 }
 </style>

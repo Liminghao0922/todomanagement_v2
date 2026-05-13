@@ -80,7 +80,7 @@ cd infra
 然后在 Foundry Web UI 中完成 Agent 配置，接入：
 
 - 内置工具（Microsoft Graph、Cosmos 查询）
-- 自定义工具（`/api/tools/extract-action-items`）
+- 自定义工具（`/api/tools/estimate-hours`）
 
 ## GitHub Actions 变量建议
 

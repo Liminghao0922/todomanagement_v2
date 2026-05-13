@@ -224,16 +224,16 @@ az staticwebapp upload \
    - **Model**: gpt-4o-mini (from your Azure OpenAI deployment)
    - **System prompt**: Define agent behavior
    - **Built-in tools**: Enable Microsoft Graph + Cosmos DB queries
-   - **Custom tool**: Add endpoint POST `/api/tools/extract-action-items`
-     - Input: `{ "meeting_text": "..." }`
-     - Output: `{ "action_items": [...], "count": N }`
+   - **Custom tool**: Add endpoint POST `/api/tools/estimate-hours`
+     - Input: `{ "title": "...", "description": "...", "category": "...", "complexity": "..." }`
+     - Output: `{ "found": true, "estimatedHours": N, "similarTodos": [...] }`
 
 5. Update `foundry-agent-config.json` with:
    ```json
    {
      "agentName": "todo-assistant",
      "model": "gpt-4o-mini",
-     "toolsEndpoint": "https://[functionAppUrl]/api/tools/extract-action-items",
+     "toolsEndpoint": "https://[functionAppUrl]/api/tools/estimate-hours",
      ...
    }
    ```

@@ -30,7 +30,7 @@ The v3 architecture implements a **cloud-native, serverless, identity-based** de
 │  │  Azure Functions (Python 3.11)                      │   │
 │  │  - HTTP: GET/POST/PATCH/DELETE /todos               │   │
 │  │  - HTTP: POST /chat (Foundry proxy)                 │   │
-│  │  - HTTP: POST /tools/extract-action-items           │   │
+│  │  - HTTP: POST /tools/estimate-hours                 │   │
 │  │  - Timer: 0 0 */6 * * * (calendar scan)             │   │
 │  │  - Managed Identity: system-assigned               │   │
 │  └────────────────┬─────────────────────────────────────┘   │
@@ -67,8 +67,8 @@ The v3 architecture implements a **cloud-native, serverless, identity-based** de
 │  │  │  ├─ Microsoft Graph (Calendar API)               │   │
 │  │  │  └─ Azure Cosmos DB (query + Gremlin)            │   │
 │  │  └─ Custom tool endpoint:                           │   │
-│  │     └─ POST /api/tools/extract-action-items         │   │
-│  │        (receives meeting text, returns JSON)        │   │
+│  │     └─ POST /api/tools/estimate-hours               │   │
+│  │        (vector search over historical todos)        │   │
 │  └────────────────────────────────────────────────────────┘   │
 │                                                               │
 │  ┌────────────────────────────────────────────────────────┐   │
@@ -101,7 +101,7 @@ SPA (Vue 3)
     ├─ PATCH /api/todos/{id} (update)
     ├─ DELETE /api/todos/{id} (delete)
     ├─ POST /api/chat (Foundry proxy)
-    └─ POST /api/tools/extract-action-items (custom tool)
+    └─ POST /api/tools/estimate-hours (custom tool)
          ↓
 Azure Functions (local dev: http://localhost:7071/api/...)
          ↓
@@ -169,9 +169,9 @@ Foundry Agent (gpt-4o-mini) processes request via:
 2. Built-in Cosmos DB tool (read-only)
    → Executes SQL queries on NoSQL container
    → Or traverses Gremlin graph
-3. Custom Function tool: /api/tools/extract-action-items
-   → POST { "meeting_text": "..." }
-   → Returns { "action_items": [...], "count": N }
+3. Custom Function tool: /api/tools/estimate-hours
+   → POST { "title": "...", "description": "..." }
+   → Returns { "estimatedHours": N, "similarTodos": [...] }
     ↓
 Agent chains tool results → generates natural response
     ↓

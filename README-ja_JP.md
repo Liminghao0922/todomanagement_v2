@@ -54,7 +54,7 @@ npm run dev  # http://localhost:5173
 標準的なデプロイ手順:
 1. `infra/deploy.ps1` でインフラをデプロイ
 2. Function URL、SWA URL、Cosmos Endpoint、Entra App ID、Foundry リソース出力を控える
-3. Foundry Web UI で Agent を作成し、Built-in Graph/Cosmos ツールと `/api/tools/extract-action-items` を接続
+3. Foundry Web UI で Agent を作成し、Built-in Graph/Cosmos ツールと `/api/tools/estimate-hours` を接続
 4. Function コードと Web 静的アセットをデプロイ
 5. Todo CRUD、AI 抽出、Timer スキャンを検証
 

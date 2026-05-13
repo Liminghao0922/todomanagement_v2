@@ -33,7 +33,7 @@ v3 アーキテクチャは**クラウドネイティブ、サーバーレス、
 │  │ Azure Functions (Python 3.11)                     │   │
 │  │ - GET/POST/PATCH/DELETE /todos                   │   │
 │  │ - POST /chat (Foundry 代理)                       │   │
-│  │ - POST /tools/extract-action-items (カスタム)     │   │
+│  │ - POST /tools/estimate-hours (カスタム)            │   │
 │  │ - Timer: 0 0 */6 * * * (カレンダー スキャン)       │   │
 │  └────────────────┬─────────────────────────────────┘   │
 │                   ↓
@@ -55,7 +55,7 @@ v3 アーキテクチャは**クラウドネイティブ、サーバーレス、
 │  │ Azure AI Foundry                                  │   │
 │  │ - Web UI Agent (gpt-4o-mini 駆動)                │   │
 │  │ - ビルトイン: MS Graph + Cosmos クエリ             │   │
-│  │ - カスタムツール: /api/tools/extract-action-items │   │
+│  │ - カスタムツール: /api/tools/estimate-hours        │   │
 │  └────────────────────────────────────────────────────┘   │
 │
 └──────────────────────────────────────────────────────────────┘
@@ -76,7 +76,7 @@ Vue 3 フロントエンド
   ├─ PATCH /api/todos/{id} (更新)
   ├─ DELETE /api/todos/{id} (削除)
   ├─ POST /api/chat (Foundry チャット)
-  └─ POST /api/tools/extract-action-items
+  └─ POST /api/tools/estimate-hours
        ↓
   Azure Functions
        ↓
@@ -125,8 +125,8 @@ Foundry Agent (gpt-4o-mini)
   │  ├─ SQL クエリ → NoSQL データ
   │  └─ Gremlin 検索 → 関連 todos
   └─ カスタムツール
-     └─ /api/tools/extract-action-items
-        → 会議テキスト → 行動items
+     └─ /api/tools/estimate-hours
+        → タイトル / 説明 → 推奨工数 + 類似履歴 todo
   ↓
 ツール結果チェーン → 自然言語応答生成
   ↓

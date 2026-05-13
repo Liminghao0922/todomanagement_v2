@@ -178,7 +178,7 @@ az staticwebapp upload \
 3. 配置:
    - 模型: gpt-4o-mini
    - 内置工具: Microsoft Graph + Cosmos DB
-   - 自定义工具: `/api/tools/extract-action-items`
+   - 自定义工具: `/api/tools/estimate-hours`
 
 ## 步骤 11: 验证部署
 

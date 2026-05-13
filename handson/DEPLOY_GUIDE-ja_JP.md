@@ -178,7 +178,7 @@ az staticwebapp upload \
 3. 設定:
    - モデル: gpt-4o-mini
    - ビルトインツール: Microsoft Graph + Cosmos DB
-   - カスタムツール: `/api/tools/extract-action-items`
+   - カスタムツール: `/api/tools/estimate-hours`
 
 ## ステップ 11: デプロイ検証
 
