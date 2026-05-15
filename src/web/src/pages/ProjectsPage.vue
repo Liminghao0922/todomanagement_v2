@@ -170,6 +170,13 @@
                 ✏️
               </button>
               <button
+                @click="navigateToGraph(project.id)"
+                class="btn btn-icon btn-graph"
+                title="View Graph"
+              >
+                🕸️
+              </button>
+              <button
                 @click="handleDeleteProject(project.id)"
                 class="btn btn-icon btn-delete"
                 title="Delete"
@@ -238,11 +245,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { getProjects, createProject, updateProject, deleteProject } from '@/api/projects'
 import type { Project } from '@/types'
 
 const authStore = useAuthStore()
+const router = useRouter()
 const loading = ref(false)
 const error = ref('')
 const projects = ref<Project[]>([])
@@ -446,6 +455,11 @@ const handleDeleteProject = async (id: string) => {
   }
 }
 
+// Navigate to graph page
+const navigateToGraph = (projectId: string) => {
+  router.push(`/projects/${projectId}/graph`)
+}
+
 // Page mount
 onMounted(() => {
   if (authStore.isAuthenticated) {
@@ -618,6 +632,10 @@ onMounted(() => {
 
 .btn-edit {
   color: #4CAF50;
+}
+
+.btn-graph {
+  color: #4f46e5;
 }
 
 .btn-delete {

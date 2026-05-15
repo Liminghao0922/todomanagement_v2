@@ -17,117 +17,16 @@
       <div class="header-section">
         <div class="header-top">
           <h1>📋 My Todos</h1>
-          <button 
-            @click="showCreateForm = !showCreateForm" 
-            class="btn btn-toggle"
-            :class="{ active: showCreateForm }"
+          <button
+            @click="goToNewTodo"
+            class="btn btn-primary"
           >
-            {{ showCreateForm ? '✕ Close' : '➕ New Todo' }}
+            ➕ New Todo
           </button>
         </div>
       </div>
 
       <AIAssistant />
-
-      <!-- 创建表单 -->
-      <form v-if="showCreateForm" @submit.prevent="handleCreateTodo" class="create-section">
-        <div class="create-form">
-          <input
-            v-model="newForm.title"
-            type="text"
-            placeholder="Todo Title (required)"
-            required
-            class="input"
-          />
-          <textarea
-            v-model="newForm.description"
-            placeholder="Description (optional)"
-            class="input textarea"
-            rows="2"
-          ></textarea>
-          <div class="form-row">
-            <select v-model="newForm.priority" class="input select">
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-            <input
-              v-model="newForm.dueDate"
-              type="date"
-              class="input"
-            />
-            <input
-              v-model="newForm.tags"
-              type="text"
-              placeholder="Tags (comma-separated)"
-              class="input"
-            />
-          </div>
-          <div class="form-row">
-            <select v-model="newForm.complexity" class="input select">
-              <option value="">Complexity</option>
-              <option value="simple">Simple</option>
-              <option value="medium">Medium</option>
-              <option value="complex">Complex</option>
-            </select>
-            <select v-model="newForm.projectId" class="input select">
-              <option value="">Select Project</option>
-              <option v-for="proj in projects" :key="proj.id" :value="proj.id">
-                {{ proj.name }}
-              </option>
-            </select>
-            <div>
-              <input
-                v-model="newForm.category"
-                type="text"
-                placeholder="Category"
-                list="categories-list"
-                class="input"
-              />
-              <datalist id="categories-list">
-                <option v-for="cat in categories" :key="cat" :value="cat" />
-              </datalist>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="estimate-input-wrapper">
-              <input
-                v-model="newForm.estimatedHours"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="Estimated Hours"
-                class="input"
-              />
-              <button
-                type="button"
-                class="btn-estimate"
-                :disabled="!canEstimate"
-                :title="canEstimate ? 'Estimate from past similar todos' : 'Enter a title first to estimate hours'"
-                @click="openEstimateDialog"
-              >
-                ✨ Estimate
-              </button>
-            </div>
-            <input
-              v-model="newForm.actualHours"
-              type="number"
-              step="0.1"
-              min="0"
-              placeholder="Actual Hours"
-              class="input"
-            />
-          </div>
-          <div class="form-actions">
-            <button type="submit" :disabled="loading" class="btn btn-primary">
-              {{ loading ? 'Creating...' : 'Create' }}
-            </button>
-            <button type="button" @click="resetForm" class="btn btn-secondary">
-              Clear
-            </button>
-          </div>
-        </div>
-      </form>
 
       <div v-if="error" class="error-box">
         ⚠️ {{ error }}
@@ -233,8 +132,8 @@
       <div v-if="!loading && todos.length === 0" class="empty-state">
         <p>No todos yet. Create one to get started! 🚀</p>
         <div class="empty-state-actions">
-          <button 
-            @click="showCreateForm = true" 
+          <button
+            @click="goToNewTodo"
             class="btn btn-primary btn-lg"
           >
             ➕ Create Your First Todo
@@ -322,7 +221,7 @@
               </td>
               <td class="actions-col">
                 <button
-                  @click="openEditDialog(todo)"
+                  @click="goToEditTodo(todo)"
                   class="btn btn-icon btn-edit"
                   title="Edit"
                 >
@@ -353,200 +252,31 @@
       </div>
     </template>
   </div>
-
-  <!-- 编辑对话框 -->
-  <div v-if="editingTodo" class="modal-overlay" @click="closeEditDialog">
-    <div class="modal-content" @click.stop>
-      <div class="modal-header">
-        <h3>Edit Todo</h3>
-        <button @click="closeEditDialog" class="btn-close">✕</button>
-      </div>
-      <form @submit.prevent="handleSaveEdit" class="edit-form">
-        <div class="form-group">
-          <label>Title *</label>
-          <input v-model="editForm.title" type="text" class="input" required />
-        </div>
-        <div class="form-group">
-          <label>Description</label>
-          <textarea v-model="editForm.description" class="input textarea" rows="3"></textarea>
-        </div>
-        <div class="form-group form-row">
-          <div>
-            <label>Priority</label>
-            <select v-model="editForm.priority" class="input select">
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
-          <div>
-            <label>Due Date</label>
-            <input v-model="editForm.dueDate" type="date" class="input" />
-          </div>
-        </div>
-        <div class="form-group form-row">
-          <div>
-            <label>Project</label>
-            <select v-model="editForm.projectId" class="input select">
-              <option value="">Select Project</option>
-              <option v-for="proj in projects" :key="proj.id" :value="proj.id">
-                {{ proj.name }}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label>Category</label>
-            <input
-              v-model="editForm.category"
-              type="text"
-              list="categories-list-edit"
-              class="input"
-            />
-            <datalist id="categories-list-edit">
-              <option v-for="cat in categories" :key="cat" :value="cat" />
-            </datalist>
-          </div>
-          <div>
-            <label>Complexity</label>
-            <select v-model="editForm.complexity" class="input select">
-              <option value="">— Select Level —</option>
-              <option value="simple">Simple</option>
-              <option value="medium">Medium</option>
-              <option value="complex">Complex</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group form-row">
-          <div>
-            <label>Est. Hours</label>
-            <input v-model="editForm.estimatedHours" type="number" step="0.1" min="0" class="input" />
-          </div>
-          <div>
-            <label>Actual Hours</label>
-            <input v-model="editForm.actualHours" type="number" step="0.1" min="0" class="input" />
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Tags (comma-separated)</label>
-          <input v-model="editForm.tags" type="text" class="input" />
-        </div>
-        <div class="modal-actions">
-          <button type="submit" class="btn btn-primary">Save Changes</button>
-          <button type="button" @click="closeEditDialog" class="btn btn-secondary">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Estimate Hours Dialog -->
-  <div v-if="showEstimateDialog" class="modal-overlay" @click.self="closeEstimateDialog">
-    <div class="modal estimate-modal">
-      <h3>✨ Estimate Hours from Past Data</h3>
-
-      <div v-if="estimateLoading" class="estimate-loading">
-        <div class="spinner" />
-        <p>Searching past similar todos…</p>
-      </div>
-
-      <div v-else-if="estimateError" class="error-box">⚠️ {{ estimateError }}</div>
-
-      <div v-else-if="estimateResult && estimateResult.found" class="estimate-result">
-        <div class="estimate-headline">
-          <span class="estimate-value">{{ estimateResult.estimatedHours }}h</span>
-          <span class="estimate-range">range {{ estimateResult.minHours }}h – {{ estimateResult.maxHours }}h</span>
-        </div>
-        <p class="estimate-reason">{{ estimateResult.reasoning }}</p>
-        <div v-if="estimateResult.similarTodos?.length" class="estimate-samples">
-          <p class="samples-label">Based on:</p>
-          <ul>
-            <li v-for="s in estimateResult.similarTodos" :key="s.id">
-              <span class="sample-title">{{ s.title }}</span>
-              <span class="sample-hours">{{ s.actualHours }}h</span>
-              <span class="sample-sim">sim {{ (s.similarity * 100).toFixed(0) }}%</span>
-            </li>
-          </ul>
-        </div>
-        <div class="modal-actions">
-          <button class="btn btn-primary" @click="applyEstimate">Apply {{ estimateResult.estimatedHours }}h</button>
-          <button class="btn btn-secondary" @click="closeEstimateDialog">Cancel</button>
-        </div>
-      </div>
-
-      <div v-else-if="estimateResult && !estimateResult.found" class="estimate-empty">
-        <p>{{ estimateResult.message || 'No similar past todos with recorded actual hours were found.' }}</p>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="closeEstimateDialog">Close</button>
-        </div>
-      </div>
-    </div>
-  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useTodoStore } from '@/stores/todoStore'
 import { useAuthStore } from '@/stores/authStore'
 import { getProjects } from '@/api/projects'
-import { estimateHours, type EstimateHoursResponse } from '@/api/ai'
 import AIAssistant from '@/components/AIAssistant.vue'
 import type { Todo, Project } from '@/types'
 
+const router = useRouter()
 const todoStore = useTodoStore()
 const authStore = useAuthStore()
 const loading = computed(() => todoStore.loading)
 const error = computed(() => todoStore.error)
 const todos = computed(() => todoStore.todos)
 
-// ── Estimate Hours Dialog ─────────────────────────────────
-const showEstimateDialog = ref(false)
-const estimateLoading = ref(false)
-const estimateError = ref('')
-const estimateResult = ref<EstimateHoursResponse | null>(null)
-const canEstimate = computed(() => (newForm.value.title || '').trim().length > 0)
-
-const openEstimateDialog = async () => {
-  const title = (newForm.value.title || '').trim()
-  const description = (newForm.value.description || '').trim()
-  if (!title) {
-    estimateError.value = 'Please enter a title first.'
-    showEstimateDialog.value = true
-    return
-  }
-  showEstimateDialog.value = true
-  estimateLoading.value = true
-  estimateError.value = ''
-  estimateResult.value = null
-  try {
-    estimateResult.value = await estimateHours({
-      title,
-      description,
-      category: newForm.value.category || undefined,
-      complexity: newForm.value.complexity || undefined,
-    })
-  } catch (err: any) {
-    estimateError.value = err?.message || 'Failed to estimate hours.'
-  } finally {
-    estimateLoading.value = false
-  }
-}
-
-const applyEstimate = () => {
-  if (estimateResult.value?.estimatedHours != null) {
-    newForm.value.estimatedHours = String(estimateResult.value.estimatedHours)
-  }
-  closeEstimateDialog()
-}
-
-const closeEstimateDialog = () => {
-  showEstimateDialog.value = false
-  estimateError.value = ''
-  estimateResult.value = null
-}
+const goToNewTodo = () => router.push('/todos/new')
+const goToEditTodo = (todo: Todo) => router.push(`/todos/${todo.id}/edit`)
 
 // Projects list
 const projects = ref<Project[]>([])
 
-// Categories list - predefined + dynamic
+// Categories list - used by the filter dropdown
 const categories = ref<string[]>(['feature', 'bug', 'refactor', 'documentation'])
 
 // 搜索和过滤
@@ -596,50 +326,6 @@ const clearDateFilters = () => {
   dueDateStart.value = ''
   dueDateEnd.value = ''
 }
-
-// 创建和编辑表单
-const newForm = ref({
-  title: '',
-  description: '',
-  priority: 'medium' as const,
-  tags: '',
-  status: 'pending' as const,
-  dueDate: '',
-  // Phase 1 fields
-  estimatedHours: '',
-  complexity: '' as any,
-  projectId: '',
-  category: '',
-  // Phase 2 fields
-  actualHours: '',
-  dependencies: '',
-  requiredSkills: '',
-  // Completion fields
-  completedAt: '',
-  completedContent: '',
-})
-
-const showCreateForm = ref(false)
-const editingTodo = ref<Todo | null>(null)
-const editForm = ref({
-  title: '',
-  description: '',
-  priority: 'medium' as const,
-  tags: '',
-  dueDate: '',
-  // Phase 1 fields
-  estimatedHours: '',
-  complexity: '' as any,
-  projectId: '',
-  category: '',
-  // Phase 2 fields
-  actualHours: '',
-  dependencies: '',
-  requiredSkills: '',
-  // Completion fields
-  completedAt: '',
-  completedContent: '',
-})
 
 // 检查是否有活跃的过滤器
 const hasActiveFilters = computed(() => {
@@ -727,66 +413,6 @@ const truncate = (text: string | undefined, length: number) => {
   return text.length > length ? text.substring(0, length) + '...' : text
 }
 
-// 创建 Todo
-const handleCreateTodo = async () => {
-  if (!newForm.value.title.trim()) return
-
-  try {
-    // Add category to list if new
-    addCategoryIfNew(newForm.value.category)
-
-    await todoStore.createTodo({
-      title: newForm.value.title,
-      description: newForm.value.description || undefined,
-      priority: newForm.value.priority,
-      status: newForm.value.status,
-      tags: newForm.value.tags
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean),
-      dueDate: newForm.value.dueDate ? new Date(newForm.value.dueDate) : undefined,
-      // Phase 1 fields
-      estimatedHours: newForm.value.estimatedHours ? parseInt(newForm.value.estimatedHours) : undefined,
-      complexity: newForm.value.complexity || undefined,
-      projectId: newForm.value.projectId || undefined,
-      category: newForm.value.category || undefined,
-      // Phase 2 fields
-      actualHours: newForm.value.actualHours ? parseInt(newForm.value.actualHours) : undefined,
-      dependencies: newForm.value.dependencies ? newForm.value.dependencies.split(',').map(d => d.trim()).filter(Boolean) : undefined,
-      requiredSkills: newForm.value.requiredSkills ? newForm.value.requiredSkills.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-      // Completion fields
-      completedAt: newForm.value.completedAt ? new Date(newForm.value.completedAt) : undefined,
-      completedContent: newForm.value.completedContent || undefined,
-    } as any)
-
-    resetForm()
-    showCreateForm.value = false
-  } catch (err) {
-    console.error('Failed to create todo:', err)
-  }
-}
-
-// 重置表单
-const resetForm = () => {
-  newForm.value = {
-    title: '',
-    description: '',
-    priority: 'medium',
-    tags: '',
-    status: 'pending',
-    dueDate: '',
-    estimatedHours: '',
-    complexity: '',
-    projectId: '',
-    category: '',
-    actualHours: '',
-    dependencies: '',
-    requiredSkills: '',
-    completedAt: '',
-    completedContent: '',
-  }
-}
-
 // 切换 Todo 状态
 const handleToggleTodo = async (id: string, completed: boolean) => {
   try {
@@ -807,75 +433,6 @@ const handleStatusChange = async (id: string, newStatus: string) => {
   } catch (err) {
     console.error('Failed to update todo status:', err)
   }
-}
-
-// 打开编辑对话框
-const openEditDialog = (todo: Todo) => {
-  editingTodo.value = todo
-  editForm.value = {
-    title: todo.title,
-    description: todo.description || '',
-    priority: todo.priority,
-    tags: todo.tags.join(', '),
-    dueDate: todo.dueDate ? formatDateForInput(todo.dueDate) : '',
-    estimatedHours: todo.estimatedHours?.toString() || '',
-    complexity: todo.complexity || '',
-    projectId: todo.projectId || '',
-    category: todo.category || '',
-    actualHours: todo.actualHours?.toString() || '',
-    dependencies: todo.dependencies?.join(', ') || '',
-    requiredSkills: todo.requiredSkills?.join(', ') || '',
-    completedAt: todo.completedAt ? formatDateForInput(todo.completedAt) : '',
-    completedContent: todo.completedContent || '',
-  }
-}
-
-// 关闭编辑对话框
-const closeEditDialog = () => {
-  editingTodo.value = null
-}
-
-// 保存编辑
-const handleSaveEdit = async () => {
-  if (!editingTodo.value || !editForm.value.title.trim()) return
-
-  try {
-    // Add category to list if new
-    addCategoryIfNew(editForm.value.category)
-
-    await todoStore.updateTodo(editingTodo.value.id, {
-      title: editForm.value.title,
-      description: editForm.value.description || undefined,
-      priority: editForm.value.priority,
-      tags: editForm.value.tags
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean),
-      dueDate: editForm.value.dueDate ? new Date(editForm.value.dueDate) : undefined,
-      // Phase 1 fields
-      estimatedHours: editForm.value.estimatedHours ? parseInt(editForm.value.estimatedHours) : undefined,
-      complexity: editForm.value.complexity || undefined,
-      projectId: editForm.value.projectId || undefined,
-      category: editForm.value.category || undefined,
-      // Phase 2 fields
-      actualHours: editForm.value.actualHours ? parseInt(editForm.value.actualHours) : undefined,
-      dependencies: editForm.value.dependencies ? editForm.value.dependencies.split(',').map(d => d.trim()).filter(Boolean) : undefined,
-      requiredSkills: editForm.value.requiredSkills ? editForm.value.requiredSkills.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-      // Completion fields
-      completedAt: editForm.value.completedAt ? new Date(editForm.value.completedAt) : undefined,
-      completedContent: editForm.value.completedContent || undefined,
-    } as any)
-
-    closeEditDialog()
-  } catch (err) {
-    console.error('Failed to save todo:', err)
-  }
-}
-
-// 日期输入格式化
-const formatDateForInput = (dateString: string | Date) => {
-  const date = typeof dateString === 'string' ? new Date(dateString) : dateString
-  return date.toISOString().split('T')[0]
 }
 
 // 删除 Todo
@@ -951,12 +508,6 @@ const getProjectName = (projectId?: string): string => {
   return project?.name || '—'
 }
 
-// Helper function to add category if not exists
-const addCategoryIfNew = (category?: string) => {
-  if (category && category.trim() && !categories.value.includes(category.trim())) {
-    categories.value.push(category.trim())
-  }
-}
 </script>
 
 <style scoped>

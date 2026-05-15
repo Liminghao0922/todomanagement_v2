@@ -12,6 +12,21 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/ProjectsPage.vue'),
     meta: { title: 'Projects', requiresAuth: true },
   },
+  {
+    path: '/projects/:id/graph',
+    component: () => import('@/pages/ProjectGraphPage.vue'),
+    meta: { title: 'Project Graph', requiresAuth: true },
+  },
+  {
+    path: '/todos/new',
+    component: () => import('@/pages/TodoEditPage.vue'),
+    meta: { title: 'New Todo', requiresAuth: true },
+  },
+  {
+    path: '/todos/:id/edit',
+    component: () => import('@/pages/TodoEditPage.vue'),
+    meta: { title: 'Edit Todo', requiresAuth: true },
+  },
 ]
 
 const router = createRouter({

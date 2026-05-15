@@ -19,6 +19,8 @@ export interface Todo {
   description?: string
   status: 'pending' | 'in-progress' | 'completed'
   priority: 'low' | 'medium' | 'high'
+  plannedStartDate?: Date | string
+  plannedEndDate?: Date | string
   dueDate?: Date | string
   tags: string[]
   createdAt: Date | string

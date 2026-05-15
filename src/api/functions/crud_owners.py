@@ -30,8 +30,17 @@ def create_owner(req: func.HttpRequest) -> func.HttpResponse:
     if not email:
         return _json_response({"error": "email is required"}, status_code=400)
 
+    # Get container outside try block to ensure it's always defined
     try:
         container = get_owners_container()
+    except RuntimeError as exc:
+        return _json_response({"error": str(exc)}, status_code=503)
+    except Exception as exc:
+        logger.exception("get_owners_container failed")
+        return _json_response({"error": str(exc)}, status_code=503)
+
+    # Check if owner already exists
+    try:
         existing = container.read_item(item=owner_id, partition_key=owner_id)
         return _json_response(existing, status_code=200)
     except RuntimeError as exc:

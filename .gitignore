@@ -498,3 +498,4 @@ local.settings.json
 # Azurite (Azure Storage local emulator)
 __blobstorage__/
 __azurite_db_*.json
+src/api/local.settings.json

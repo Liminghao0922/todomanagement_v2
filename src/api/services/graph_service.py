@@ -1,8 +1,12 @@
 import os
+import logging
 from typing import Any
 
 from gremlin_python.driver import client
 from gremlin_python.driver.serializer import GraphSONSerializersV2d0
+from azure.identity import DefaultAzureCredential
+
+logger = logging.getLogger(__name__)
 
 
 def upsert_todo_vertex(todo_doc: dict[str, Any]) -> None:
@@ -80,19 +84,33 @@ def _get_client() -> client.Client | None:
     endpoint = os.getenv("COSMOS_GREMLIN_ENDPOINT", "").strip()
     database = os.getenv("COSMOS_GREMLIN_DATABASE", "todo-graph-db").strip()
     graph = os.getenv("COSMOS_GREMLIN_GRAPH", "todo-graph").strip()
-    key = os.getenv("COSMOS_KEY", "").strip()
-    if not endpoint or not key:
+    
+    if not endpoint:
+        logger.warning("COSMOS_GREMLIN_ENDPOINT not configured")
         return None
 
-    if endpoint.startswith("wss://"):
+    # Convert REST endpoint to WebSocket Gremlin endpoint
+    # From: https://cosgr-xxx.documents.azure.com:443/
+    # To:   wss://cosgr-xxx.gremlin.cosmos.azure.com:443/
+    if endpoint.startswith("https://"):
+        ws_endpoint = endpoint.replace("https://", "wss://").replace(".documents.azure.com", ".gremlin.cosmos.azure.com")
+    elif endpoint.startswith("wss://"):
         ws_endpoint = endpoint
     else:
-        ws_endpoint = endpoint.replace("https://", "wss://").rstrip("/") + "/"
+        ws_endpoint = endpoint.replace("http://", "wss://").replace(".documents.azure.com", ".gremlin.cosmos.azure.com")
 
-    return client.Client(
-        url=ws_endpoint,
-        traversal_source="g",
-        username=f"/dbs/{database}/colls/{graph}",
-        password=key,
-        message_serializer=GraphSONSerializersV2d0(),
-    )
+    try:
+        # Get Azure AD token for Cosmos DB
+        credential = DefaultAzureCredential()
+        token = credential.get_token("https://cosmos.azure.com/.default")
+        
+        return client.Client(
+            url=ws_endpoint,
+            traversal_source="g",
+            username=f"/dbs/{database}/colls/{graph}",
+            password=token.token,
+            message_serializer=GraphSONSerializersV2d0(),
+        )
+    except Exception as exc:
+        logger.exception("Failed to get Gremlin client with AAD: %s", exc)
+        return None

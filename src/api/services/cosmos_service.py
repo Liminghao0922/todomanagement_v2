@@ -34,7 +34,7 @@ def _database_name() -> str:
 
 def _auto_create_enabled() -> bool:
     # Keep production behavior unchanged unless explicitly enabled.
-    env_flag = os.getenv("COSMOS_AUTO_CREATE", "")
+    env_flag = os.getenv("COSMOS_AUTO_CREATE", "true")
     if env_flag:
         return env_flag.lower() in ("1", "true", "yes", "on")
 
@@ -57,7 +57,13 @@ def _database_client():
         except cosmos_exceptions.CosmosHttpResponseError as exc:
             # AAD data-plane RBAC cannot create databases; fall back to read if it exists.
             if exc.status_code in (401, 403):
-                return client.get_database_client(db_name)
+                try:
+                    return client.get_database_client(db_name)
+                except Exception as e:
+                    raise RuntimeError(
+                        f"Database '{db_name}' does not exist and AAD credentials lack create permission. "
+                        f"Please ensure the database exists or use Primary Key authentication for development. Error: {e}"
+                    )
             raise
     return client.get_database_client(db_name)
 
@@ -72,7 +78,13 @@ def _get_container(container_name: str, partition_key_path: str):
             )
         except cosmos_exceptions.CosmosHttpResponseError as exc:
             if exc.status_code in (401, 403):
-                return db.get_container_client(container_name)
+                try:
+                    return db.get_container_client(container_name)
+                except Exception as e:
+                    raise RuntimeError(
+                        f"Container '{container_name}' does not exist and AAD credentials lack create permission. "
+                        f"Please ensure the container exists or use Primary Key authentication for development. Error: {e}"
+                    )
             raise
     return db.get_container_client(container_name)
 
