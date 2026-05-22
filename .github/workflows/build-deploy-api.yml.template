@@ -1,4 +1,4 @@
-name: Build and Deploy API to ACR
+name: Build and Deploy API to Function App
 
 on:
   push:
@@ -24,38 +24,18 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Install ContainerApp Extension
-        run: |
-          az extension add --name containerapp --upgrade
-
-      - name: Build and push image to ACR
-        uses: Azure/acr-build@v1
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          service_principal: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
-          service_principal_password: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
-          tenant: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
-          registry: ${{ vars.ACR_NAME }}
-          repository: todomanagement-api
-          tag: latest
-          dockerfile: Dockerfile
-          folder: src/api
-          branch: main
+          python-version: '3.11'
 
-      - name: Deploy to Container App
+      - name: Install dependencies for deployment package
         run: |
-          az containerapp up \
-            --name todomanagement-api \
-            --resource-group ${{ vars.RESOURCE_GROUP }} \
-            --environment ${{ vars.CONTAINER_APP_ENVIRONMENT }} \
-            --image ${{ vars.ACR_NAME }}.azurecr.io/todomanagement-api:latest \
-            --registry-server ${{ vars.ACR_NAME }}.azurecr.io \
-            --registry-identity ${{ vars.USER_ASSIGNED_IDENTITY_RESOURCE_ID }} \
-            --target-port 8000 \
-            --ingress internal \
-            --env-vars AZURE_CLIENT_ID="${{ vars.USER_ASSIGNED_IDENTITY_CLIENT_ID }}" \
-                        USER_ASSIGNED_IDENTITY_CLIENT_ID="${{ vars.USER_ASSIGNED_IDENTITY_CLIENT_ID }}" \
-                        POSTGRES_SERVER="${{ vars.POSTGRES_SERVER }}" \
-                        POSTGRES_DB="${{ vars.POSTGRES_DB }}" \
-                        POSTGRES_USER="${{ vars.POSTGRES_USER }}" \
-                        DATABASE_TYPE="${{ vars.DATABASE_TYPE }}" \
-                        ENVIRONMENT="production"
+          python -m pip install --upgrade pip
+          pip install -r src/api/requirements.txt --target "src/api/.python_packages/lib/site-packages"
+
+      - name: Deploy to Azure Functions
+        uses: azure/functions-action@v1
+        with:
+          app-name: ${{ vars.FUNCTION_APP_NAME }}
+          package: src/api
