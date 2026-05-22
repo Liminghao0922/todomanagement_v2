@@ -1,4 +1,4 @@
-name: Build and Deploy Web to ACR
+name: Build and Deploy Web to Static Web App
 
 on:
   push:
@@ -19,38 +19,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Log in to Azure
-        uses: azure/login@v1
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: src/web/package-lock.json
 
-      - name: Install ContainerApp Extension
-        run: |
-          az extension add --name containerapp --upgrade
+      - name: Install dependencies
+        working-directory: src/web
+        run: npm ci
 
-      - name: Build and push image to ACR
-        uses: Azure/acr-build@v1
+      - name: Build
+        working-directory: src/web
+        env:
+          VITE_AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          VITE_AZURE_AUTHORITY: https://login.microsoftonline.com/${{ vars.AZURE_TENANT_ID }}
+          VITE_AZURE_REDIRECT_URI: ${{ vars.AZURE_REDIRECT_URI }}
+        run: npm run build
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
         with:
-          service_principal: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
-          service_principal_password: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
-          tenant: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
-          registry: ${{ vars.ACR_NAME }}
-          repository: todomanagement-web
-          tag: latest
-          dockerfile: Dockerfile
-          folder: src/web
-          branch: main
-          build_args: '[{"VITE_AZURE_CLIENT_ID":"${{ vars.AZURE_CLIENT_ID }}"}, {"VITE_AZURE_AUTHORITY":"https://login.microsoftonline.com/${{ vars.AZURE_TENANT_ID }}"}, {"VITE_AZURE_REDIRECT_URI":"${{ vars.AZURE_REDIRECT_URI }}"}]'
-
-      - name: Deploy to Container App
-        run: |
-          az containerapp up \
-            --name todomanagement-web \
-            --resource-group ${{ vars.RESOURCE_GROUP }} \
-            --environment ${{ vars.CONTAINER_APP_ENVIRONMENT }} \
-            --image ${{ vars.ACR_NAME }}.azurecr.io/todomanagement-web:latest \
-            --registry-server ${{ vars.ACR_NAME }}.azurecr.io \
-            --registry-identity ${{ vars.USER_ASSIGNED_IDENTITY_RESOURCE_ID }} \
-            --target-port 80 \
-            --ingress external \
-            --env-vars API_PROXY_TARGET="${{ vars.API_PROXY_TARGET }}"
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: src/web
+          output_location: dist
+          skip_app_build: true

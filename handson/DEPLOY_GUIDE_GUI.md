@@ -172,7 +172,9 @@ After provisioning:
 4. **Advanced** choose `East Asia` for **Region for Azure Functions API and staging environments**
 5. **Review + create** → **Create**.
    ![Create Static Web App](image/DEPLOY_GUIDE_GUI/12-create-swa.png)
-6. After provisioning: open the SWA → **Manage deployment token** → copy the token. Save it for Phase 4.
+6. After provisioning: open the SWA  copy the following information and save them for Phase 4.
+   - **Manage deployment token**
+   - **URL**
 
 📖 Reference: [https://learn.microsoft.com/azure/static-web-apps/getting-started](https://learn.microsoft.com/azure/static-web-apps/getting-started)
 
@@ -189,19 +191,14 @@ After provisioning:
 5. **Register**.
 
 After creation:
-
-6. **Authentication** → **+ Add URI** → `http://localhost:5173/`. Save.
-7. **API permissions** → **+ Add a permission** → Microsoft Graph → **Delegated**:
-   - `User.Read`
-   - `Calendars.Read`
-   - **Grant admin consent** if your tenant requires it.
-8. From the **Overview** page, copy:
-   - **Application (client) ID** → save as `CLIENT_ID`
-   - **Directory (tenant) ID** → save as `TENANT_ID`
+6. Optional. If you want to execute the locally, execute this step. **Authentication** → **+ Add URI** → `http://localhost:5173/`. Save.
+7. From the **Overview** page, copy:
+    - **Application (client) ID** → save as `CLIENT_ID`
+    - **Directory (tenant) ID** → save as `TENANT_ID`
 
 📖 Reference: [https://learn.microsoft.com/entra/identity-platform/quickstart-register-app](https://learn.microsoft.com/entra/identity-platform/quickstart-register-app)
 
-![SPA app registration](image/DEPLOY_GUIDE_GUI/07-spa-app-registration.png)
+![SPA app registration](image/DEPLOY_GUIDE_GUI/register-an-application.png)
 
 ---
 
@@ -211,7 +208,7 @@ After creation:
    - Role `Cosmos DB Built-in Data Contributor`
    - Assign access to: **Managed identity** → select the Function App.
 2. Open the Foundry **project** → **Access control (IAM)** → **+ Add role assignment**:
-   - Role `Azure AI Developer`
+   - Role `Azure AI User`
    - Assign access to: **Managed identity** → select the Function App.
 
 📖 Reference: [https://learn.microsoft.com/azure/cosmos-db/how-to-setup-rbac](https://learn.microsoft.com/azure/cosmos-db/how-to-setup-rbac)
@@ -345,19 +342,19 @@ After creation:
 
 In the Function App → **Settings** → **Environment variables** → **+ Add**, add the following variables:
 
-| Name                            | Value                                                                                                       |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------  |
-| `COSMOS_AUTH_MODE`              | `aad`                                                                                                       |
-| `COSMOS_AUTO_CREATE`            | `true`                                                                                                      |
-| `COSMOS_ENDPOINT`               | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.2                                     |
-| `COSMOS_DATABASE`               | `todo-db`                                                                                                   |
-| `COSMOS_GREMLIN_ENDPOINT`       | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.3                                     |
-| `COSMOS_GRAPH_DATABASE`         | `todo-graph-db`                                                                                             |
-| `COSMOS_GRAPH_NAME`             | `todo-graph`                                                                                                |
-| `FOUNDRY_AGENT_ENDPOINT`        | `https://<foundry>.services.ai.azure.com/api/projects/proj-default`, the project endpoint from step 1.4     |
-| `FOUNDRY_EMBEDDING_DEPLOYMENT`  | `text-embedding-3-small`                                                                                    |
-| `FOUNDRY_AGENT_NAME`            | `todomanagement-agent`, the agent name form step 3.2                                                        |
-| `FOUNDRY_AGENT_VERSION`         | e.g.`1` the version from step 3.2                                                                           |
+| Name                             | Value                                                                                                     |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `COSMOS_AUTH_MODE`             | `aad`                                                                                                   |
+| `COSMOS_AUTO_CREATE`           | `true`                                                                                                  |
+| `COSMOS_ENDPOINT`              | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.2                                 |
+| `COSMOS_DATABASE`              | `todo-db`                                                                                               |
+| `COSMOS_GREMLIN_ENDPOINT`      | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.3                                 |
+| `COSMOS_GRAPH_DATABASE`        | `todo-graph-db`                                                                                         |
+| `COSMOS_GRAPH_NAME`            | `todo-graph`                                                                                            |
+| `FOUNDRY_AGENT_ENDPOINT`       | `https://<foundry>.services.ai.azure.com/api/projects/proj-default`, the project endpoint from step 1.4 |
+| `FOUNDRY_EMBEDDING_DEPLOYMENT` | `text-embedding-3-small`                                                                                |
+| `FOUNDRY_AGENT_NAME`           | `todomanagement-agent`, the agent name form step 3.2                                                    |
+| `FOUNDRY_AGENT_VERSION`        | e.g.`1` the version from step 3.2                                                                       |
 
 Click **Apply**.
 
@@ -385,7 +382,7 @@ Create your repository from template, refer to [Creating a repository from a tem
 
 Configure GitHub Actions with your Azure credentials and resource details first, then enable workflow files to avoid empty/failed initial runs.
 
-#### 4.3.1: Create Azure Service Principal and Credentials
+#### 4.3.1 Create Azure Service Principal and Credentials
 
 Reference: [Create an Azure service principal (MS Learn)](https://learn.microsoft.com/en-us/azure/developer/github/publish-docker-container)
 
@@ -415,52 +412,40 @@ Reference: [Create an Azure service principal (MS Learn)](https://learn.microsof
    # Output as JSON (for later use)
    $sp | ConvertTo-Json
    ```
-
 3. Copy the JSON output (the entire `{...}` block)
 
 **Note:** This JSON output is sensitive. Keep it secure.
 
 ---
 
-#### 4.2.2: Add GitHub Actions Secret
+#### 4.2.2 Add GitHub Actions Secret
 
 1. In your GitHub repository, go to **Settings**
-2. In the left menu, click **Secrets and variables** > **Actions**
-3. Click **New repository secret**
-4. **Name**: `AZURE_CREDENTIALS`
-5. **Secret**: Paste the JSON output from Step 4.2.1
-6. Click **Add secret**
-   ![Add AZURE_CREDENTIALS secret](image/DEPLOY_GUIDE_GUI/github-add-azure-cred.png)
+2. In the left menu, click **Secrets and variables** > **Actions** > click **New repository secret**, and add these repository secretes.| Variable                            | Value                                                  | Reference       |
+   | ----------------------------------- | ------------------------------------------------------ | --------------- |
+   | `AZURE_CREDENTIALS`               | Application's Credentials Json                         | From Step 4.2.1 |
+   | `AZURE_STATIC_WEB_APPS_API_TOKEN` | Your Static Web App's**Manage deployment token** | From Step 1.6   |
+
+ ![Add AZURE_CREDENTIALS secret](image/DEPLOY_GUIDE_GUI/github-add-cred.png)
 
 ---
 
-### Step 3.3: Add GitHub Repository Variables
+#### 4.2.3 Add GitHub Repository Variables
 
 Reference: [Using variables in GitHub Actions (GitHub Docs)](https://docs.github.com/en/actions/learn-github-actions/variables)
 
 In your GitHub repository **Settings** > **Secrets and variables** > **Actions**, click **Variables**, and add these repository variables:
 
-
-| Variable                             | Value                                    | Reference     |
-| ------------------------------------ | ---------------------------------------- | ------------- |
-| `RESOURCE_GROUP`                     | Your resource group name                 | From Step 1.9 |
-| `ACR_NAME`                           | Your ACR name (without`.azurecr.io`)     | From Step 1.9 |
-| `CONTAINER_APP_ENVIRONMENT`          | Your Container Apps Environment name     | From Step 1.9 |
-| `POSTGRES_SERVER`                    | Your PostgreSQL server FQDN              | From Step 1.9 |
-| `POSTGRES_USER`                      | Your user-assigned managed identity name | From Step 1.9 |
-| `POSTGRES_DB`                        | `tododb`                                 | Fixed value   |
-| `DATABASE_TYPE`                      | `postgresql`                             | Fixed value   |
-| `AZURE_CLIENT_ID`                    | Entra ID App Client ID                   | From Step 1.9 |
-| `AZURE_TENANT_ID`                    | Entra ID App Tenant ID                   | From Step 1.9 |
-| `USER_ASSIGNED_IDENTITY_CLIENT_ID`   | Managed Identity Client ID               | From Step 1.9 |
-| `USER_ASSIGNED_IDENTITY_RESOURCE_ID` | Managed Identity Resource ID             | From Step 1.9 |
-| `AZURE_REDIRECT_URI`                 | Your web Container App URL               | From Step 1.9 |
-| `API_PROXY_TARGET`                   | Your internal API Container App URL      | From Step 1.9 |
-| `REPOSITORY`                         | Your repository URL                      | From Step 2.1 |
+| Variable               | Value                                               | Reference     |
+| ---------------------- | --------------------------------------------------- | ------------- |
+| `AZURE_CLIENT_ID`      | Entra ID App Client ID                              | From Step 2.1 |
+| `AZURE_TENANT_ID`      | Entra ID App Tenant ID                              | From Step 2.1 |
+| `AZURE_REDIRECT_URI`   | Your static web App URL                             | From Step 1.6 |
+| `FUNCTION_APP_NAME`    | Your function app name, e.g.`func-todomanagement`   | From Step 1.5 |
 
 ---
 
-### Step 3.4: Prepare workflow files
+#### 4.2.4 Prepare workflow files
 
 Reference: [GitHub Actions documentation](https://docs.github.com/en/actions)
 
@@ -492,7 +477,7 @@ git push origin main
 
 ---
 
-### Step 3.5: Run GitHub Actions Workflows
+#### 4.2.5 Run GitHub Actions Workflows
 
 1. In your repository, go to the **Actions** tab
 2. You should see both workflows listed:
@@ -513,55 +498,6 @@ git push origin main
 
 ---
 
-
-
-### 4.2 Publish the Function code from Cloud Shell
-
-```powershell
-git clone https://github.com/<your-username>/<your-repo>.git
-cd <your-repo>/src/api
-
-func azure functionapp publish func-todomanagement-<unique> --python
-```
-
-Verify:
-
-```powershell
-curl https://func-todomanagement-<unique>.azurewebsites.net/api/health
-```
-
-You should see `{"status":"healthy",...}`.
-
-![func publish output](image/DEPLOY_GUIDE_GUI/11-func-publish.png)
-
----
-
-### 4.3 Build the SPA and deploy to SWA
-
-Still in Cloud Shell:
-
-```powershell
-cd ../web
-
-@"
-VITE_AZURE_CLIENT_ID=<CLIENT_ID from Phase 2.1>
-VITE_AZURE_AUTHORITY=https://login.microsoftonline.com/<TENANT_ID from Phase 2.1>
-VITE_AZURE_REDIRECT_URI=https://<swa>.azurestaticapps.net
-"@ | Out-File .env.local -Encoding utf8
-
-npm install
-npm run build
-
-npm install -g @azure/static-web-apps-cli
-swa deploy ./dist --deployment-token <SWA token from Phase 1.6> --env production
-```
-
-📖 Reference: [https://learn.microsoft.com/azure/static-web-apps/static-web-apps-cli-deploy](https://learn.microsoft.com/azure/static-web-apps/static-web-apps-cli-deploy)
-
-![SWA deploy](image/DEPLOY_GUIDE_GUI/12-swa-deploy.png)
-
----
-
 ## Phase 5. Validate End-to-End
 
 1. Open `https://<swa>.azurestaticapps.net` and sign in via MSAL.
@@ -579,7 +515,7 @@ swa deploy ./dist --deployment-token <SWA token from Phase 1.6> --env production
 ## Phase 6. Cleanup
 
 ```powershell
-az group delete --name rg-todomanagement-dev --yes --no-wait
+az group delete --name rg-todomanagementv2-dev --yes --no-wait
 ```
 
 Manually delete the Entra ID app registration (`todomanagement-spa`) under **Microsoft Entra ID → App registrations** if you no longer need it.
