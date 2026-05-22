@@ -1,6 +1,6 @@
 {
-  "name": "todo-copilot-assistant",
-  "model": "gpt-4o-mini",
+  "name": "todomanagement-agent",
+  "model": "gpt-5.4-mini",
   "description": "Todo assistant with calendar-aware prioritization, meeting action-item extraction, and effort estimation.",
   "instructions": [
     "Use the built-in Microsoft Graph calendar tool to understand availability and deadlines.",
