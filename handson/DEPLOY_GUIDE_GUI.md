@@ -155,6 +155,9 @@ After provisioning:
     ![Set function authentication](image/DEPLOY_GUIDE_GUI/10-set-function-authentication.png)
 11. **Review + create** → **Create**.
     ![Function App created](image/DEPLOY_GUIDE_GUI/11-create-function-app.png)
+12. After provisioning: open Function App,  **Settings** → **Identity** → **User assigned** → **func-todomanagement-uami**
+    copy the **Client Id** and **Object (principal) ID**, then save them.
+    ![Copy function uami cliend id](image/DEPLOY_GUIDE_GUI/copy-function-uami-client-id.png)
 
 📖 Reference: [https://learn.microsoft.com/azure/azure-functions/functions-create-function-app-portal](https://learn.microsoft.com/azure/azure-functions/functions-create-function-app-portal)
 
@@ -202,18 +205,67 @@ After creation:
 
 ---
 
-### 2.2 Grant the Function App's managed identity access to Cosmos and Foundry
+### 2.2 Grant the Function App's managed identity access to Cosmos and Foundry and Cosmos MCP Toolkit
 
-1. Open the Cosmos DB account → **Access control (IAM)** → **+ Add** → **Add role assignment**:
-   - Role `Cosmos DB Built-in Data Contributor`
-   - Assign access to: **Managed identity** → select the Function App.
+1. Assign `Cosmos DB Built-in Data Contributor` role to Function App's User Assigned Managed Identity.
+   a. Open **Cloud Shell** and click **Switch to PowerShell** if the current session is not PowerShell from Azure Portal.
+   ![Switch to Bash](image/DEPLOY_GUIDE_GUI/cloudshell-switch-to-bash.png)
+   b. Run this command:
+
+   ```bash
+   az cosmosdb sql role assignment create \
+    --account-name "<your-cosmos-db-account-name>" \
+    --resource-group "<your-resource-group-name>" \
+    --role-definition-id "00000000-0000-0000-0000-000000000002" \
+    --principal-id "<your-azure-function-uami-id>" \
+    --scope "/"
+
+   az cosmosdb sql role assignment create \
+    --account-name "<your-cosmos-gremlin-db-account-name>" \
+    --resource-group "<your-resource-group-name>" \
+    --role-definition-id "00000000-0000-0000-0000-000000000002" \
+    --principal-id "<your-azure-function-uami-id>" \
+    --scope "/"
+   ```
+
+   ![Assign Cosmos DB Built-in Data Contributor role to Function App](image/DEPLOY_GUIDE_GUI/assign-cosmos-role-to-func.png)
+   📖 Reference: [https://learn.microsoft.com/azure/cosmos-db/how-to-setup-rbac](https://learn.microsoft.com/azure/cosmos-db/how-to-setup-rbac)
 2. Open the Foundry **project** → **Access control (IAM)** → **+ Add role assignment**:
-   - Role `Azure AI User`
-   - Assign access to: **Managed identity** → select the Function App.
 
-📖 Reference: [https://learn.microsoft.com/azure/cosmos-db/how-to-setup-rbac](https://learn.microsoft.com/azure/cosmos-db/how-to-setup-rbac)
+   - Role `Foundry User`
+   - Assign access to: **Managed identity** → select the **func-todomanagement-uami**.
+     ![Assign Foundry User role to Function App](image/DEPLOY_GUIDE_GUI/assign-foundry-role-to-func.png)
+3. Grant `MCP Tool Executor` role to Function App's managed identity
+   a. **Microsoft Entra Id** → **Enterprise applications** → search `Azure Cosmos DB MCP Toolkit API` and open it.
+   ![Search MCP Toolkit App](image/DEPLOY_GUIDE_GUI/search-mcp-toolkit.png)
+   b. **Manage**  → **Users and groups** → **+ Add user/group**
+   a. Open **Cloud Shell** and click **Switch to PowerShell** if the current session is not PowerShell from Azure Portal.
+   ![Switch to Bash](image/DEPLOY_GUIDE_GUI/cloudshell-switch-to-bash.png)
+   b. Run this command:
 
-![Cosmos role assignment](image/DEPLOY_GUIDE_GUI/08-cosmos-rbac.png)
+   ```powershell
+   $TenantDomain = "<Specify your tenant id>"
+   $ResourceName = "Azure Cosmos DB MCP Toolkit API"
+   $AppRoleName = "Mcp.Tool.Executor"
+   $PrincipalName = "foundry-todomanagement-v2/projects/proj-default"
+   $Resource = az ad sp list --display-name $ResourceName --query "{ AppRoleId: [0] .appRoles [?value=='$AppRoleName'].id | [0], ObjectId:[0] .id }" -o json | ConvertFrom-Json
+
+   $Principal = az ad sp list --display-name $PrincipalName --query "{ ObjectId: [0] .id }" -o json | ConvertFrom-Json
+   
+
+   $spObjectId = $Resource.ObjectId 
+   $body = @{
+      principalId = $Principal.ObjectId
+      resourceId = $Resource.ObjectId 
+      appRoleId = $Resource.AppRoleId
+   } | ConvertTo-Json
+         
+   az rest --method POST `
+      --url "https://graph.microsoft.com/v1.0/servicePrincipals/$spObjectId/appRoleAssignedTo" `
+      --headers "Content-Type=application/json" `
+      --body $body 2>&1
+
+   ```
 
 ---
 
@@ -272,7 +324,7 @@ After creation:
    a. Search **Container Apps** → click the new created container app **mcp-toolkit-app**.
    b. Click **Application Url** to open the MCP app in a new tab.
    c. Open **Cloud Shell** and click **Switch to Bash** if the current session is not Bash from Azure Portal.
-   ![switch to bash](image/DEPLOY_GUIDE_GUI/3-03-switch-to-bash.png)
+   ![switch to bash](image/DEPLOY_GUIDE_GUI/cloudshell-switch-to-bash.png)
    d. Execute the following command to get client id, tenant id, and save them.
 
    ```bash
@@ -418,7 +470,7 @@ Reference: [Create an Azure service principal (MS Learn)](https://learn.microsof
 
 ---
 
-#### 4.2.2 Add GitHub Actions Secret
+#### 4.3.2 Add GitHub Actions Secret
 
 1. In your GitHub repository, go to **Settings**
 2. In the left menu, click **Secrets and variables** > **Actions** > click **New repository secret**, and add these repository secretes.| Variable                            | Value                                                  | Reference       |
@@ -430,7 +482,7 @@ Reference: [Create an Azure service principal (MS Learn)](https://learn.microsof
 
 ---
 
-#### 4.2.3 Add GitHub Repository Variables
+#### 4.3.3 Add GitHub Repository Variables
 
 Reference: [Using variables in GitHub Actions (GitHub Docs)](https://docs.github.com/en/actions/learn-github-actions/variables)
 
@@ -438,14 +490,14 @@ In your GitHub repository **Settings** > **Secrets and variables** > **Actions**
 
 | Variable               | Value                                               | Reference     |
 | ---------------------- | --------------------------------------------------- | ------------- |
-| `AZURE_CLIENT_ID`      | Entra ID App Client ID                              | From Step 2.1 |
-| `AZURE_TENANT_ID`      | Entra ID App Tenant ID                              | From Step 2.1 |
-| `AZURE_REDIRECT_URI`   | Your static web App URL                             | From Step 1.6 |
-| `FUNCTION_APP_NAME`    | Your function app name, e.g.`func-todomanagement`   | From Step 1.5 |
+| `AZURE_CLIENT_ID`    | Entra ID App Client ID                              | From Step 2.1 |
+| `AZURE_TENANT_ID`    | Entra ID App Tenant ID                              | From Step 2.1 |
+| `AZURE_REDIRECT_URI` | Your static web App URL                             | From Step 1.6 |
+| `FUNCTION_APP_NAME`  | Your function app name, e.g.`func-todomanagement` | From Step 1.5 |
 
 ---
 
-#### 4.2.4 Prepare workflow files
+#### 4.3.4 Prepare workflow files
 
 Reference: [GitHub Actions documentation](https://docs.github.com/en/actions)
 
@@ -477,7 +529,7 @@ git push origin main
 
 ---
 
-#### 4.2.5 Run GitHub Actions Workflows
+#### 4.3.5 Run GitHub Actions Workflows
 
 1. In your repository, go to the **Actions** tab
 2. You should see both workflows listed:
