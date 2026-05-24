@@ -12,13 +12,13 @@ Estimated time: 90–120 minutes.
 
 | Term                           | Meaning in this hands-on                                                                                                                    |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Resource Group**       | Logical container for all v2 resources (default name `rg-todomanagementv2-dev`).                                                          |
-| **Function App**         | Azure Functions on a Linux Consumption (Y1) plan that hosts `src/api/`.                                                                   |
-| **Static Web App (SWA)** | Hosts the Vue 3 SPA built from `src/web/`.                                                                                                |
-| **Cosmos DB serverless** | Stores SQL containers (`todos` / `owners` / `projects` / `conversations`) and the Gremlin graph (`todo-graph-db`/`todo-graph`). |
-| **Microsoft Foundry**    | Provides `gpt-4o-mini` and `text-embedding-3-small`.                                                                                    |
-| **App registration**     | Entra ID identity for the SPA (sign-in) and, optionally, server-to-Foundry consent.                                                         |
-| **Managed identity**     | The Function App's system-assigned identity used to obtain AAD tokens for Cosmos Gremlin and Azure OpenAI.                                  |
+| **Resource Group**             | Logical container for all v2 resources (default name `rg-todomanagementv2-dev`).                                                            |
+| **Function App**               | Azure Functions on a Linux Consumption (Y1) plan that hosts `src/api/`.                                                                     |
+| **Static Web App (SWA)**       | Hosts the Vue 3 SPA built from `src/web/`.                                                                                                  |
+| **Cosmos DB serverless**       | Stores SQL containers (`todos` / `owners` / `projects` / `conversations`) and the Gremlin graph (`todo-graph-db`/`todo-graph`).             |  
+| **Microsoft Foundry**          | Provides `gpt-4o-mini` and `text-embedding-3-small`.                                                                                        |
+| **App registration**           | Entra ID identity for the SPA (sign-in) and, optionally, server-to-Foundry consent.                                                         |
+| **Managed identity**           | The Function App's system-assigned identity used to obtain AAD tokens for Cosmos Gremlin and Azure OpenAI.                                  |
 
 ---
 
@@ -68,12 +68,13 @@ Estimated time: 90–120 minutes.
 
    | Container                                                                                                                                            | Partition key |
    | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-   | `todos`                                                                                                                                            | `/owner_id` |
-   | `owners`                                                                                                                                           | `/id`       |
-   | `projects`                                                                                                                                         | `/owner_id` |
-   | `conversations`                                                                                                                                    | `/owner_id` |
-   | ![Cosmos containers](image/DEPLOY_GUIDE_GUI/03-cosmos-containers.png)                                                                                  |               |
-   | 📖 Reference:[https://learn.microsoft.com/azure/cosmos-db/nosql/quickstart-portal](https://learn.microsoft.com/azure/cosmos-db/nosql/quickstart-portal) |               |
+   | `todos`                                                                                                                                              | `/owner_id` |
+   | `owners`                                                                                                                                             | `/id`       |
+   | `projects`                                                                                                                                           | `/owner_id` |
+   | `conversations`                                                                                                                                      | `/owner_id` |
+
+![Cosmos containers](image/DEPLOY_GUIDE_GUI/03-cosmos-containers.png)
+📖 Reference:[https://learn.microsoft.com/azure/cosmos-db/nosql/quickstart-portal](https://learn.microsoft.com/azure/cosmos-db/nosql/quickstart-portal)
 
 ---
 
@@ -320,6 +321,7 @@ After creation:
    ```powershell
    .\scripts\Deploy-Cosmos-MCP-Toolkit-CloudShellVersion.ps1 -ResourceGroup "rg-todomanagementv2-dev"
    ```
+
 5. Test Your Deployment
    a. Search **Container Apps** → click the new created container app **mcp-toolkit-app**.
    b. Click **Application Url** to open the MCP app in a new tab.
@@ -396,17 +398,17 @@ In the Function App → **Settings** → **Environment variables** → **+ Add**
 
 | Name                             | Value                                                                                                     |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `COSMOS_AUTH_MODE`             | `aad`                                                                                                   |
-| `COSMOS_AUTO_CREATE`           | `true`                                                                                                  |
-| `COSMOS_ENDPOINT`              | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.2                                 |
-| `COSMOS_DATABASE`              | `todo-db`                                                                                               |
-| `COSMOS_GREMLIN_ENDPOINT`      | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.3                                 |
-| `COSMOS_GRAPH_DATABASE`        | `todo-graph-db`                                                                                         |
-| `COSMOS_GRAPH_NAME`            | `todo-graph`                                                                                            |
-| `FOUNDRY_AGENT_ENDPOINT`       | `https://<foundry>.services.ai.azure.com/api/projects/proj-default`, the project endpoint from step 1.4 |
-| `FOUNDRY_EMBEDDING_DEPLOYMENT` | `text-embedding-3-small`                                                                                |
-| `FOUNDRY_AGENT_NAME`           | `todomanagement-agent`, the agent name form step 3.2                                                    |
-| `FOUNDRY_AGENT_VERSION`        | e.g.`1` the version from step 3.2                                                                       |
+| `COSMOS_AUTH_MODE`               | `aad`                                                                                                     |
+| `COSMOS_AUTO_CREATE`             | `true`                                                                                                    |
+| `COSMOS_ENDPOINT`                | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.2                                   |
+| `COSMOS_DATABASE`                | `todo-db`                                                                                                 |
+| `COSMOS_GREMLIN_ENDPOINT`        | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.3                                   |
+| `COSMOS_GRAPH_DATABASE`          | `todo-graph-db`                                                                                           |
+| `COSMOS_GRAPH_NAME`              | `todo-graph`                                                                                              |
+| `FOUNDRY_AGENT_ENDPOINT`         | `https://<foundry>.services.ai.azure.com/api/projects/proj-default`, the project endpoint from step 1.4   |
+| `FOUNDRY_EMBEDDING_DEPLOYMENT`   | `text-embedding-3-small`                                                                                  |
+| `FOUNDRY_AGENT_NAME`             | `todomanagement-agent`, the agent name form step 3.2                                                      |
+| `FOUNDRY_AGENT_VERSION`          | e.g.`1` the version from step 3.2                                                                         |
 
 Click **Apply**.
 
@@ -464,6 +466,7 @@ Reference: [Create an Azure service principal (MS Learn)](https://learn.microsof
    # Output as JSON (for later use)
    $sp | ConvertTo-Json
    ```
+
 3. Copy the JSON output (the entire `{...}` block)
 
 **Note:** This JSON output is sensitive. Keep it secure.
@@ -490,10 +493,10 @@ In your GitHub repository **Settings** > **Secrets and variables** > **Actions**
 
 | Variable               | Value                                               | Reference     |
 | ---------------------- | --------------------------------------------------- | ------------- |
-| `AZURE_CLIENT_ID`    | Entra ID App Client ID                              | From Step 2.1 |
-| `AZURE_TENANT_ID`    | Entra ID App Tenant ID                              | From Step 2.1 |
-| `AZURE_REDIRECT_URI` | Your static web App URL                             | From Step 1.6 |
-| `FUNCTION_APP_NAME`  | Your function app name, e.g.`func-todomanagement` | From Step 1.5 |
+| `AZURE_CLIENT_ID`      | Entra ID App Client ID                              | From Step 2.1 |
+| `AZURE_TENANT_ID`      | Entra ID App Tenant ID                              | From Step 2.1 |
+| `AZURE_REDIRECT_URI`   | Your static web App URL                             | From Step 1.6 |
+| `FUNCTION_APP_NAME`    | Your function app name, e.g.`func-todomanagement`   | From Step 1.5 |
 
 ---
 
