@@ -1,4 +1,4 @@
-# Todo Management v2 部署指南（Azure 门户路径）
+# Todo Management v2 部署指南（Azure 门户路径）　- 待确认
 
 [English](DEPLOY_GUIDE_GUI.md) | [简体中文](DEPLOY_GUIDE_GUI-zh_CN.md) | [日本語](DEPLOY_GUIDE_GUI-ja_JP.md)
 
