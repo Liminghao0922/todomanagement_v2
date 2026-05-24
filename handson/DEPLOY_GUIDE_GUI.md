@@ -370,9 +370,6 @@ After creation:
    1. Enter the following message in the playground. Approve the tool-calling request when asked.
       `List all databases in my Cosmos DB account`
       ![Test Cosmos DB tool](image/DEPLOY_GUIDE_GUI/agent-test-cosmos-tool.png)
-   2. Enter the following message in the playground. Approve the tool-calling request when asked.
-      `List all meetings in my calendar`
-      ![Test WorkIQ Calendar tool](image/DEPLOY_GUIDE_GUI/agent-test-calendar-tool.png)
       📖 Reference: [https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/tool-catalog](https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/tool-catalog)
 
 ---

@@ -10,15 +10,15 @@
 
 ## このガイドで使う用語
 
-| 用語 | このハンズオンにおける意味 |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **リソース グループ** | すべての v2 リソースを格納する論理コンテナー（既定名は `rg-todomanagementv2-dev`）。 |
-| **Function App** | `src/api/` をホストする Linux Flex Consumption プラン上の Azure Functions。 |
-| **Static Web App (SWA)** | `src/web/` からビルドした Vue 3 SPA をホスト。 |
+| 用語                           | このハンズオンにおける意味                                                                                                               |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **リソース グループ**    | すべての v2 リソースを格納する論理コンテナー（既定名は `rg-todomanagementv2-dev`）。                                                   |
+| **Function App**         | `src/api/` をホストする Linux Flex Consumption プラン上の Azure Functions。                                                            |
+| **Static Web App (SWA)** | `src/web/` からビルドした Vue 3 SPA をホスト。                                                                                         |
 | **Cosmos DB Serverless** | SQL コンテナー（`todos` / `owners` / `projects` / `conversations`）と Gremlin グラフ（`todo-graph-db`/`todo-graph`）を保存。 |
-| **Microsoft Foundry** | `gpt-5.4-mini` と `text-embedding-3-small` を提供。 |
-| **アプリ登録** | SPA サインイン用の Entra ID アプリケーションと、必要に応じてサーバーから Foundry へアクセスするための同意設定。 |
-| **マネージド ID** | Cosmos Gremlin と Azure OpenAI の AAD トークン取得に使う、Function App のシステム割り当て ID。 |
+| **Microsoft Foundry**    | `gpt-5.4-mini` と `text-embedding-3-small` を提供。                                                                                  |
+| **アプリ登録**           | SPA サインイン用の Entra ID アプリケーションと、必要に応じてサーバーから Foundry へアクセスするための同意設定。                          |
+| **マネージド ID**        | Cosmos Gremlin と Azure OpenAI の AAD トークン取得に使う、Function App のシステム割り当て ID。                                           |
 
 ---
 
@@ -27,9 +27,9 @@
 ### 1.1 リソース グループを作成する
 
 1. `https://portal.azure.com` を開いてサインインします。
-2. **Resource groups** を検索し、**+ Create** を選択します。
-3. Subscription には使用するサブスクリプションを選択し、**Resource group** に `rg-todomanagementv2-dev`、**Region** に `Japan East`（または Cosmos + Foundry + Functions Linux + SWA をすべてサポートする任意のリージョン）を指定します。
-4. **Review + create** → **Create** を選択します。
+2. **リソース グループ** を検索し、**+ 作成** を選択します。
+3. Subscription には使用するサブスクリプションを選択し、**リソース グループ名** に `rg-todomanagementv2-dev`、**リージョン** に `Japan East`（または Cosmos + Foundry + Functions Linux + SWA をすべてサポートする任意のリージョン）を指定します。
+4. **レビューと作成** → **作成** を選択します。
 
 📖 参考: [https://learn.microsoft.com/azure/azure-resource-manager/management/manage-resource-groups-portal](https://learn.microsoft.com/azure/azure-resource-manager/management/manage-resource-groups-portal)
 
@@ -39,73 +39,70 @@
 
 ### 1.2 NoSQL 用の Cosmos DB アカウントを作成する
 
-1. **Azure Cosmos DB** を検索し、**+ Create** を選択します。
+1. **Azure Cosmos DB** を検索し、**+ 作成** を選択します。
 2. API は **Azure Cosmos DB for NoSQL** を選択します。
 3. **Basics** では次を設定します。
+   - **ワークロードの種類**: `Learning`
+   - **リソース グループ**: `rg-todomanagementv2-dev`
+   - **アカウント名**: `cosmos-todomanagement-<unique>`（小文字英字と数字のみ）
+   - **可用性ゾーン**: `無効`
+   - **場所**: リソース グループと同じ
+   - **容量モード**: **Serverless**
+4. **グローバル配布** では次を設定します。
 
-   - Workload Type: `Learning`
-   - Resource group: `rg-todomanagementv2-dev`
-   - Account name: `cosmos-todomanagement-<unique>`（小文字英字と数字のみ）
-   - Availability Zones: `Disable`
-   - Location: リソース グループと同じ
-   - Capacity mode: **Serverless**
-4. **Global distribution** では次を設定します。
+   - **Geo 冗長性**: `無効`
+   - **マルチリージョン書き込み**: `無効`
+5. **ネットワーク** では次を設定します。
 
-   - Geo-Redundancy: `Disable`
-   - Multi-region Writes: `Disable`
-5. **Networking** では次を設定します。
+   - **ネットワーク接続**: `すべてのネットワーク`。必要に応じて後で制限します。
+6. **バックアップ ポリシー** は既定値のままで問題ありません。
+7. **セキュリティ** では次を設定します。
 
-   - Connectivity method: `All networks`。必要に応じて後で制限します。
-6. **Backup Policy** は既定値のままで問題ありません。
-7. **Security** では次を設定します。
-
-   - Key-based Authentication: `Disable`。認証には Entra ID を使用します。
-   - Data Encryption: `Service-managed key`
-8. **Review + create** → **Create** を選択します。
+   - **キーベースの認証**: `無効`。認証には Entra ID を使用します。
+   - **データ暗号化**: `サービス マネージド キー`
+8. **レビュー + 作成** → **作成** を選択します。
    ![Cosmos DB アカウントの作成](image/DEPLOY_GUIDE_GUI/02-create-cosmos.png)
    デプロイ完了後:
-9. アカウントを開き、**Data Explorer** → **New Database** を選択して ID に `todo-db` を入力します。その後、次の 4 つのコンテナーを作成します。
+9. アカウントを開き、**データ エクスプローラー** → **New Database** を選択して ID に `todo-db` を入力します。その後、次の 4 つのコンテナーを作成します。
 
-   | コンテナー | パーティション キー |
-   | ----------------- | ------------- |
-   | `todos` | `/owner_id` |
-   | `owners` | `/id` |
-   | `projects` | `/owner_id` |
-   | `conversations` | `/owner_id` |
+   | Container         | Partition key       |
+   | ----------------- | ------------------- |
+   | `todos`           | `/owner_id`         |
+   | `owners`          | `/id`               |
+   | `projects`        | `/owner_id`         |
+   | `conversations`   | `/owner_id`         |
 
 ![Cosmos コンテナー](image/DEPLOY_GUIDE_GUI/03-cosmos-containers.png)
-📖 参考: [https://learn.microsoft.com/azure/cosmos-db/nosql/quickstart-portal](https://learn.microsoft.com/azure/cosmos-db/nosql/quickstart-portal)
+📖 参考: [https://learn.microsoft.com/ja-jp/azure/cosmos-db/quickstart-portal](https://learn.microsoft.com/ja-jp/azure/cosmos-db/quickstart-portal)
 
 ---
 
 ### 1.3 Gremlin API 用の Azure Cosmos DB アカウントを作成する
 
-1. **Azure Cosmos DB** を検索し、**+ Create** を選択します。
+1. **Azure Cosmos DB** を検索し、**+ 作成** を選択します。
 2. API は **Azure Cosmos DB for Apache Gremlin** を選択します。
    ![Azure Cosmos DB for Apache Gremlin の選択](image/DEPLOY_GUIDE_GUI/04-cosmosgre-select-api.png)
 3. **Basics** では次を設定します。
+   - **ワークロードの種類**: `Learning`
+   - **リソース グループ**: `rg-todomanagementv2-dev`
+   - **アカウント名**: `cosmos-todomanagement-<unique>`（小文字英字と数字のみ）
+   - **可用性ゾーン**: `無効`
+   - **場所**: リソース グループと同じ
+   - **容量モード**: **Serverless**
+4. **グローバル配布** では次を設定します。
 
-   - Workload Type: `Learning`
-   - Resource group: `rg-todomanagementv2-dev`
-   - Account name: `cosmosgre-todomanagement-<unique>`（小文字英字と数字のみ）
-   - Availability Zones: `Disable`
-   - Location: リソース グループと同じ
-   - Capacity mode: **Serverless**
-4. **Global distribution** では次を設定します。
+   - **Geo 冗長性**: `無効`
+   - **マルチリージョン書き込み**: `無効`
+5. **ネットワーク** では次を設定します。
 
-   - Geo-Redundancy: `Disable`
-   - Multi-region Writes: `Disable`
-5. **Networking** では次を設定します。
-
-   - Connectivity method: `All networks`。必要に応じて後で制限します。
-6. **Backup Policy** は既定値のままで問題ありません。
-7. **Security** では次を設定します。
-
-   - Data Encryption: `Service-managed key`
-8. **Review + create** → **Create** を選択します。
+   - **ネットワーク接続**: `すべてのネットワーク`。必要に応じて後で制限します。
+6. **バックアップ ポリシー** は既定値のままで問題ありません。
+7. **セキュリティ** では次を設定します。
+   - **データ暗号化**: `サービス マネージド キー`
+8. **レビュー + 作成** → **作成** を選択します。
    ![Gremlin Cosmos DB アカウントの作成](image/DEPLOY_GUIDE_GUI/05-create-cosmosgre.png)
    デプロイ完了後:
-9. アカウントを開き、**Data Explorer** → **New Graph** を選択して次を設定します。
+9. アカウントを開き、**データ エクスプローラー** → **New Graph** を選択して次を設定します。
 
    - **Database id**: `todo-graph-db`
    - **Graph id**: `todo-graph`
@@ -116,47 +113,47 @@
 
 ### 1.4 Foundry リソースを作成し、モデルをデプロイする
 
-1. **Microsoft Foundry** → **Foundry** を検索し、**+ Create** を選択します。
-2. **Basics** で次を設定します。
-   - Resource group: `rg-todomanagementv2-dev`
-   - Name: `foundry-todomanagement-<unique>`（小文字英字と数字のみ）
-   - Region: リソース グループと同じ
-3. **Review + create** → **Create** を選択します。
+1. **Microsoft Foundry** → **Foundry** → **+ 作成** を選択します。
+2. **基本情報** で次を設定します。
+   - **リソース グループ**: `rg-todomanagementv2-dev`
+   - **名前**: `foundry-todomanagement-<unique>`（小文字英字と数字のみ）
+   - **リージョン**: リソース グループと同じ
+3. **確認と作成** → **作成** を選択します。
 
 ![Foundry リソースの作成](image/DEPLOY_GUIDE_GUI/07-create-foundry-resource.png)
 デプロイ完了後:
-4. Foundry リソースを開き、**Go to Foundry portal** を選択して `Project endpoint` をコピーし、控えておきます。
-5. **Build** → **Models** → **Deploy a base model** を開き、`text-embedding-3-small` を検索します。
-6. `text-embedding-3-small` を選択し、**Deploy** → **Default settings** を選びます。
+4. Foundry リソースを開き、**Foundry ポータルに移動** を選択して `Project endpoint` をコピーし、控えておきます。
+5. **ビルド** → **モデル** → **基本モデルをデプロイする** を開き、`text-embedding-3-small` を検索します。
+6. `text-embedding-3-small` を選択し、**デプロイ** → **既定の設定** を選びます。
 ![text-embedding-3-small のデプロイ](image/DEPLOY_GUIDE_GUI/08-deploy-embedding-model.png)
-7. **Build** → **Models** → **Deploy a base model** を開き、`gpt-5.4-mini` を検索します。
-8. `gpt-5.4-mini` を選択し、**Deploy** → **Default settings** を選びます。
+7. **ビルド** → **モデル** → **基本モデルをデプロイする** を開き、`gpt-5.4-mini` を検索します。
+8. `gpt-5.4-mini` を選択し、**デプロイ** → **既定の設定** を選びます。
 ![gpt-5.4-mini のデプロイ](image/DEPLOY_GUIDE_GUI/09-deploy-gpt-model.png)
 
 ---
 
 ### 1.5 Function App と Storage を作成する
 
-1. **Function App** を検索し、**+ Create** を選択します。
-2. `Flex Consumption` を選択します。
-3. **Basics** で次を設定します。
-   - Resource group: `rg-todomanagementv2-dev`
-   - Function App name: `func-todomanagement` とし、**Secure unique default hostname** を有効にします。
-   - Region: リソース グループと同じ
-   - Runtime stack: `Python` 3.11
-   - Instance size: `2048 MB`
-   - Zone redundancy: `Disabled`
+1. **関数アプリ** を検索し、**+ 作成** を選択します。
+2. `フレックス従量課金` を選択します。
+3. **基本** で次を設定します。
+   - **リソース グループ**: `rg-todomanagementv2-dev`
+   - **関数アプリ名**: `func-todomanagement` とし、**Secure unique default hostname** を有効にします。
+   - **リージョン**: リソース グループと同じ
+   - **ランタイム スタック**: `Python` 3.11
+   - **インスタンス サイズ**: `2048 MB`
+   - **ゾーン冗長**: `無効`
 4. **Storage** では、新しいストレージ アカウント `satodomanagement<unique>`（小文字 + 数字、最大 24 文字）を作成します。
 5. **Azure OpenAI** は既定値のままにします。
-6. **Networking** は Public access enabled、inbound restriction なし（必要に応じて後で厳格化）にします。
-7. **Monitoring** では Application Insights を有効化し、必要に応じて新しいコンポーネントを作成します。
+6. **ネットワーク** は パブリック アクセスを有効にします。
+7. **監視** では Application Insights を有効化し、必要に応じて新しいコンポーネントを作成します。
 8. **Durable Functions** は既定値のままにします。
-9. **Deployment** は既定値のままにします。
-10. **Authentication** では Authentication type を `Managed identity` に変更します。
+9. **デプロイ** は既定値のままにします。
+10. **認証** では Authentication type を `マネージド ID` に変更します。
     ![Function 認証の設定](image/DEPLOY_GUIDE_GUI/10-set-function-authentication.png)
-11. **Review + create** → **Create** を選択します。
+11. **確認および作成** → **作成** を選択します。
     ![Function App 作成完了](image/DEPLOY_GUIDE_GUI/11-create-function-app.png)
-12. デプロイ完了後、Function App を開き、**Settings** → **Identity** → **User assigned** → **func-todomanagement-uami** に進み、**Client Id** と **Object (principal) ID** をコピーして保存します。
+12. デプロイ完了後、Function App を開き、**設定** → **ID** → **ユーザー割り当て済み** → **func-todomanagement-uami** に進み、**クライアント ID** と **オブジェクト (プリンシパル) ID** をコピーして保存します。
     ![Function UAMI client id のコピー](image/DEPLOY_GUIDE_GUI/copy-function-uami-client-id.png)
 
 📖 参考: [https://learn.microsoft.com/azure/azure-functions/functions-create-function-app-portal](https://learn.microsoft.com/azure/azure-functions/functions-create-function-app-portal)
@@ -165,18 +162,18 @@
 
 ### 1.6 Static Web App を作成する
 
-1. **Static Web Apps** を検索し、**+ Create** を選択します。
-2. **Basics** で次を設定します。
-   - Resource group: `rg-todomanagementv2-dev`
-   - Name: `stapp-todomanagement-<unique>`
-   - Plan type: `Standard`
-   - Deployment details: **Other** を選択
-3. **Deployment configuration** では **Deployment token** を選択します。
-4. **Advanced** では、**Region for Azure Functions API and staging environments** に `East Asia` を選択します。
-5. **Review + create** → **Create** を選択します。
+1. **静的 Web アプリ** を検索し、**+ 作成** を選択します。
+2. **基本** で次を設定します。
+   - **リソース グループ**: `rg-todomanagementv2-dev`
+   - **名前**: `stapp-todomanagement-<unique>`
+   - **プランの種類**: `Standard`
+   - **デプロイの詳細**: **Other** を選択
+3. **デプロイ構成** では **デプロイ トークン** を選択します。
+4. **詳細設定** では、**Azure Functions API とステージング環境のリージョン** に `East Asia` を選択します。
+5. **確認および作成** → **作成** を選択します。
    ![Static Web App の作成](image/DEPLOY_GUIDE_GUI/12-create-swa.png)
 6. デプロイ完了後、SWA を開いて次の情報をコピーし、フェーズ 4 のために保存します。
-   - **Manage deployment token**
+   - **デプロイ トークンの管理**
    - **URL**
 
 📖 参考: [https://learn.microsoft.com/azure/static-web-apps/getting-started](https://learn.microsoft.com/azure/static-web-apps/getting-started)
@@ -187,17 +184,18 @@
 
 ### 2.1 Microsoft Entra ID に SPA を登録する
 
-1. **Microsoft Entra ID** → **App registrations** → **+ New registration** を開きます。
-2. Name に `todomanagementv2-spa` を入力します。
-3. Supported account types は **Accounts in this organizational directory only** を選択します。
-4. Redirect URI は **Single-page application (SPA)** → `https://<swa>.azurestaticapps.net/` を指定します。
-5. **Register** を選択します。
+1. **Microsoft Entra ID** → **アプリの登録** → **+ 新規登録** を開きます。
+2. **名前** に `todomanagementv2-spa` を入力します。
+3. **サポートされているアカウントの種類** は `シングル テナントのみ` を選択します。
+4. **リダイレクト URI** は `シングルページ アプリケーション (SPA)` → `https://<swa>.azurestaticapps.net/` を指定します。
+5. **登録** を選択します。
 
 作成後:
-6. 任意。ローカル実行も行う場合は、**Authentication** → **+ Add URI** に `http://localhost:5173/` を追加して保存します。
-7. **Overview** ページから次をコピーします。
-   - **Application (client) ID** → `CLIENT_ID` として保存
-   - **Directory (tenant) ID** → `TENANT_ID` として保存
+6. 任意。ローカル実行も行う場合は、**Authentication** → **+ リダイレクト URI の追加** に `http://localhost:5173/` を追加して保存します。
+7. **概要** ページから次をコピーします。
+
+- **アプリケーション (クライアント) ID** → `CLIENT_ID` として保存
+- **ディレクトリ (テナント) ID** → `TENANT_ID` として保存
 
 📖 参考: [https://learn.microsoft.com/entra/identity-platform/quickstart-register-app](https://learn.microsoft.com/entra/identity-platform/quickstart-register-app)
 
@@ -230,10 +228,10 @@
 
    ![Function App への Cosmos DB Built-in Data Contributor ロール割り当て](image/DEPLOY_GUIDE_GUI/assign-cosmos-role-to-func.png)
    📖 参考: [https://learn.microsoft.com/azure/cosmos-db/how-to-setup-rbac](https://learn.microsoft.com/azure/cosmos-db/how-to-setup-rbac)
-2. Foundry の **project** → **Access control (IAM)** → **+ Add role assignment** を開きます。
+2. Foundry の **project** → **アクセス制御 (IAM)** → **+ 追加** → **ロールの割り当ての追加**を開きます。
 
-   - Role は `Foundry User`
-   - Assign access to は **Managed identity** を選び、**func-todomanagement-uami** を指定します。
+   - **ロール** は `Azure AI User`
+   - **アクセスの割り当て先** は **マネージド ID** を選び、**func-todomanagement-uami** を指定します。
      ![Function App への Foundry User ロール割り当て](image/DEPLOY_GUIDE_GUI/assign-foundry-role-to-func.png)
 3. Function App のマネージド ID に `MCP Tool Executor` ロールを付与します。
    a. Azure Portal で **Cloud Shell** を開き、現在のセッションが PowerShell でない場合は **PowerShell** に切り替えます。
@@ -272,13 +270,12 @@
 
 1. GitHub リポジトリ [https://github.com/AzureCosmosDB/MCPToolKit#option-a-deploy-to-azure-button](https://github.com/AzureCosmosDB/MCPToolKit#option-a-deploy-to-azure-button) を開きます。
 2. **Deploy to Azure** を選択します。
-
-   - Resource Group: `rg-todomanagementv2-dev`
-   - Region: リソース グループと同じ
+   - **リソース グループ**: `rg-todomanagementv2-dev`
+   - **リージョン**: リソース グループと同じ
    - Cosmos Endpoint: 手順 1.2 で作成した Cosmos DB アカウントのエンドポイント。例: `https://cosmos-todomanagement-v2.documents.azure.com:443/`
    - Azure AI Service Endpoint: Foundry プロジェクトのエンドポイント。例: `https://foundry-todomanagement-v2.services.ai.azure.com/api/projects/proj-default`
    - Embedding Deployment Name: `text-embedding-3-small`
-3. **Review + create** → **Create** を選択します。
+3. **確認と作成** → **作成** を選択します。
    ![Cosmos MCP のデプロイ](image/DEPLOY_GUIDE_GUI/3-01-depoly-cosmos-mcp.png)
 4. MCP Server アプリケーションをデプロイします。
    a. Azure Portal で **Cloud Shell** を開き、現在のセッションが PowerShell でない場合は **PowerShell** に切り替えます。
@@ -296,7 +293,7 @@
     copy ./scripts/Deploy-Cosmos-MCP-Toolkit.ps1 ./scripts/Deploy-Cosmos-MCP-Toolkit-CloudShellVersion.ps1
    ```
 
-   **Editor** を開き、`Deploy-Cosmos-MCP-Toolkit-CloudShellVersion.ps1` を編集します。
+   **エディター** を開き、`Deploy-Cosmos-MCP-Toolkit-CloudShellVersion.ps1` を編集します。
    851 行目へ移動し、次の内容に変更します。
 
    ```powershell
@@ -317,10 +314,9 @@
    ```powershell
    .\scripts\Deploy-Cosmos-MCP-Toolkit-CloudShellVersion.ps1 -ResourceGroup "rg-todomanagementv2-dev"
    ```
-
 5. デプロイ結果をテストします。
-   a. **Container Apps** を検索し、新しく作成されたコンテナー アプリ **mcp-toolkit-app** を開きます。
-   b. **Application Url** を選択して、MCP アプリを新しいタブで開きます。
+   a. **コンテナー アプリ** を検索し、新しく作成されたコンテナー アプリ **mcp-toolkit-app** を開きます。
+   b. **アプリケーション URL** を選択して、MCP アプリを新しいタブで開きます。
    c. Azure Portal で **Cloud Shell** を開き、現在のセッションが Bash でない場合は **Bash** に切り替えます。
    ![Bash へ切り替え](image/DEPLOY_GUIDE_GUI/cloudshell-switch-to-bash.png)
    d. 次のコマンドを実行して client id と tenant id を取得し、保存します。
@@ -341,37 +337,34 @@
 
 ### 3.2 Agent を作成する
 
-1. Foundry プロジェクトを開き、**Agents** → **Create agent** を選択し、agent 名を `todomanagement-agent` にして作成します。
-   ![Agent の作成](image/DEPLOY_GUIDE_GUI/3-06-create-agent.png)
+1. Foundry プロジェクトを開き、**エージェント** → **エージェントの作成** を選択し、**エージェント名**を `todomanagement-agent` にして作成します。
+   ![エージェントの作成](image/DEPLOY_GUIDE_GUI/3-06-create-agent.png)
 2. 次の情報を設定します。
-   - **Model**: `gpt-5.4-mini`
-   - **Instructions**: [../prompt/todomanagement-agent.instructions.md](../prompt/todomanagement-agent.instructions.md) の内容を入力
-3. **Tools**:
+   - **モデル**: `gpt-5.4-mini`
+   - **手順**: [../prompt/todomanagement-agent.instructions.md](../prompt/todomanagement-agent.instructions.md) の内容を入力
+3. **ツール**:
    1. **Web search** ツールを削除します。
    2. **Azure Cosmos DB** ツールを追加します。
-      a. **Add** → **Browse all tools** を選択
+      a. **追加** → **すべてのツールを参照する** を選択
       ![すべてのツールを参照](image/DEPLOY_GUIDE_GUI/agent-add-tool.png)
-      b. **Catalog** で `Azure Cosmos DB` を検索し、そのツールを選択して **Create** を選択
+      b. **カタログ** で `Azure Cosmos DB` を検索し、そのツールを選択して **作成** を選択
       ![Azure Cosmos DB ツールの選択](image/DEPLOY_GUIDE_GUI/agent-search-cosmos-tool.png)
-      c. **Connect tool with endpoint**
+      c. **ツールをエンドポイントに接続する**
       ![ツールの接続](image/DEPLOY_GUIDE_GUI/agent-connect-tool.png)
       d. Azure Cosmos DB ツールを接続
-      - **Name**: `AzureCosmosDB`
-      - **Remote MCP Server endpoint**: `<container-application-url>/mcp`。例: `https://mcp-toolkit-app.livelyforest-279726ad.japaneast.azurecontainerapps.io/mcp`
-      - **Authentication**: `Microsoft Entra`
-      - **Type**: `Project Managed Identity`
-      - **Audience**: `<entra-app-client-id>` を audience として入力します。この値は `az ad app list --display-name "Azure Cosmos DB MCP Toolkit API" --query "[0].appId" -o tsv` の出力です。
+      - **名前**: `AzureCosmosDB`
+      - **リモート MCP サーバー エンドポイント**: `<container-application-url>/mcp`。例: `https://mcp-toolkit-app.livelyforest-279726ad.japaneast.azurecontainerapps.io/mcp`
+      - **認証**: `Microsoft Entra`
+      - **種類**: `プロジェクト マネージド ID`
+      - **対象ユーザー**: `<entra-app-client-id>` を 対象ユーザー として入力します。この値は `az ad app list --display-name "Azure Cosmos DB MCP Toolkit API" --query "[0].appId" -o tsv` の出力です。
         ![ツールの接続](image/DEPLOY_GUIDE_GUI/agent-connect-tool-02.png)
         e. **Connect** を選択します。
-4. **Memory** → **Add** → **Create memory store** を選択します。
-5. Agent を **Save** し、**Name**（例: `todomanagement-agent`）と **Version**（例: `3`）を控えます。
+4. **メモリ** → **作成** → **メモリ ストアを作成する** を選択します。
+5. Agent を **保存** し、**名前**（例: `todomanagement-agent`）と **バージョン**（例: `3`）を控えます。
 6. Agent をテストします。
-   1. playground に次のメッセージを入力します。ツール呼び出しの承認を求められたら許可します。
-      `List all databases in my Cosmos DB account`
+   1. **プレイグラウンド** に次のメッセージを入力します。ツール呼び出しの承認を求められたら許可します。
+      `Cosmos DB アカウント内のすべてのデータベースを一覧表示する`
       ![Cosmos DB ツールのテスト](image/DEPLOY_GUIDE_GUI/agent-test-cosmos-tool.png)
-   2. playground に次のメッセージを入力します。ツール呼び出しの承認を求められたら許可します。
-      `List all meetings in my calendar`
-      ![WorkIQ Calendar ツールのテスト](image/DEPLOY_GUIDE_GUI/agent-test-calendar-tool.png)
       📖 参考: [https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/tool-catalog](https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/tool-catalog)
 
 ---
@@ -380,23 +373,23 @@
 
 ### 4.1 Function App のアプリケーション設定を行う
 
-Function App の **Settings** → **Environment variables** → **+ Add** で、次の変数を追加します。
+Function App の **設定** → **環境変数** → **+ 追加** で、次の変数を追加します。
 
-| 名前 | 値 |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `COSMOS_AUTH_MODE` | `aad` |
-| `COSMOS_AUTO_CREATE` | `true` |
-| `COSMOS_ENDPOINT` | `https://<cosmos>.documents.azure.com:443/`、手順 1.2 のエンドポイント |
-| `COSMOS_DATABASE` | `todo-db` |
-| `COSMOS_GREMLIN_ENDPOINT` | `https://<cosmos>.documents.azure.com:443/`、手順 1.3 のエンドポイント |
-| `COSMOS_GRAPH_DATABASE` | `todo-graph-db` |
-| `COSMOS_GRAPH_NAME` | `todo-graph` |
-| `FOUNDRY_AGENT_ENDPOINT` | `https://<foundry>.services.ai.azure.com/api/projects/proj-default`、手順 1.4 のプロジェクト エンドポイント |
-| `FOUNDRY_EMBEDDING_DEPLOYMENT` | `text-embedding-3-small` |
-| `FOUNDRY_AGENT_NAME` | `todomanagement-agent`、手順 3.2 の agent 名 |
-| `FOUNDRY_AGENT_VERSION` | 例: `1`、手順 3.2 の agent バージョン |
+| 名前                             | 値                                                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `COSMOS_AUTH_MODE`             　| `aad`                                                                                                       |
+| `COSMOS_AUTO_CREATE`           　| `true`                                                                                                      |
+| `COSMOS_ENDPOINT`              　| `https://<cosmos>.documents.azure.com:443/`、手順 1.2 のエンドポイント                                      |
+| `COSMOS_DATABASE`              　| `todo-db`                                                                                                   |
+| `COSMOS_GREMLIN_ENDPOINT`      　| `https://<cosmos>.documents.azure.com:443/`、手順 1.3 のエンドポイント                                      |
+| `COSMOS_GRAPH_DATABASE`        　| `todo-graph-db`                                                                                             |
+| `COSMOS_GRAPH_NAME`            　| `todo-graph`                                                                                                |
+| `FOUNDRY_AGENT_ENDPOINT`       　| `https://<foundry>.services.ai.azure.com/api/projects/proj-default`、手順 1.4 のプロジェクト エンドポイント |
+| `FOUNDRY_EMBEDDING_DEPLOYMENT` 　| `text-embedding-3-small`                                                                                    |
+| `FOUNDRY_AGENT_NAME`           　| `todomanagement-agent`、手順 3.2 の agent 名                                                                |
+| `FOUNDRY_AGENT_VERSION`        　| 例:`1`、手順 3.2 の agent バージョン                                                                        |
 
-**Apply** を選択します。
+**適用** を選択します。
 
 > Cosmos アカウント キーを使いたい場合は、`COSMOS_AUTH_MODE=key` に設定し、RBAC の代わりに `COSMOS_KEY=<primary key>` を追加してください。
 
@@ -452,6 +445,7 @@ Function App の **Settings** → **Environment variables** → **+ Add** で、
    # Output as JSON (for later use)
    $sp | ConvertTo-Json
    ```
+
 3. JSON 出力（`{...}` 全体）をコピーします。
 
 **注意:** この JSON 出力は機密情報です。安全に保管してください。
@@ -462,11 +456,10 @@ Function App の **Settings** → **Environment variables** → **+ Add** で、
 
 1. GitHub リポジトリで **Settings** を開きます。
 2. 左メニューから **Secrets and variables** > **Actions** > **New repository secret** を選び、次のリポジトリ Secret を追加します。
-
-   | 変数 | 値 | 参照 |
-   | ----------------------------------- | ------------------------------------------------------ | --------------- |
-   | `AZURE_CREDENTIALS` | アプリケーション資格情報の JSON | 手順 4.3.1 |
-   | `AZURE_STATIC_WEB_APPS_API_TOKEN` | Static Web App の **Manage deployment token** | 手順 1.6 |
+   | 変数                                | 値                                                 | 参照       |
+   | ----------------------------------- | -------------------------------------------------- | ---------- |
+   | `AZURE_CREDENTIALS`               | アプリケーション資格情報の JSON                    | 手順 4.3.1 |
+   | `AZURE_STATIC_WEB_APPS_API_TOKEN` | Static Web App の**Manage deployment token** | 手順 1.6   |
 
  ![AZURE_CREDENTIALS secret の追加](image/DEPLOY_GUIDE_GUI/github-add-cred.png)
 
@@ -478,12 +471,12 @@ Function App の **Settings** → **Environment variables** → **+ Add** で、
 
 GitHub リポジトリの **Settings** > **Secrets and variables** > **Actions** で **Variables** を選択し、次のリポジトリ変数を追加します。
 
-| 変数 | 値 | 参照 |
-| ---------------------- | --------------------------------------------------- | ------------- |
-| `AZURE_CLIENT_ID` | Entra ID アプリの Client ID | 手順 2.1 |
-| `AZURE_TENANT_ID` | Entra ID テナント ID | 手順 2.1 |
-| `AZURE_REDIRECT_URI` | Static Web App の URL | 手順 1.6 |
-| `FUNCTION_APP_NAME` | Function App 名。例: `func-todomanagement` | 手順 1.5 |
+| 変数                   | 値                                          | 参照     |
+| ---------------------- | ------------------------------------------- | -------- |
+| `AZURE_CLIENT_ID`    | Entra ID アプリの Client ID                 | 手順 2.1 |
+| `AZURE_TENANT_ID`    | Entra ID テナント ID                        | 手順 2.1 |
+| `AZURE_REDIRECT_URI` | Static Web App の URL                       | 手順 1.6 |
+| `FUNCTION_APP_NAME`  | Function App 名。例:`func-todomanagement` | 手順 1.5 |
 
 ---
 
@@ -548,7 +541,7 @@ git push origin main
 3. **Projects** を開き、シード済みプロジェクトを選択して **View Graph** を開き、Gremlin グラフ由来のエッジが Cytoscape で描画されることを確認します。
    ![Project のエンドツーエンド確認](image/DEPLOY_GUIDE_GUI/e2e-check-verify-projects-01.png)
    ![Project Graph のエンドツーエンド確認](image/DEPLOY_GUIDE_GUI/e2e-check-verify-projects-02.png)
-4. **Chat** で `What should I prioritize today?` のようなメッセージを送信し、Foundry agent が応答し、必要に応じて `Azure Cosmos DB` ツールを呼び出すことを確認します。
+4. **Chat** で `今日、何を優先すべきでしょうか？` のようなメッセージを送信し、Foundry agent が応答し、必要に応じて `Azure Cosmos DB` ツールを呼び出すことを確認します。
    ![Chat のエンドツーエンド確認](image/DEPLOY_GUIDE_GUI/e2e-check-verify-chat.png)
    ![Chat ツール呼び出しの確認](image/DEPLOY_GUIDE_GUI/e2e-check-verify-chat-tool-call.png)
 
