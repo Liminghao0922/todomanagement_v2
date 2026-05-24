@@ -155,9 +155,9 @@ Foundry UI に表示
 
 ## セキュリティ
 
-- **シークレット なし**: RuntimeEntra ID/Key Vault 経由で解決
+- **ハードコードされたシークレットなし**: 実行時に Entra ID / Key Vault 経由で解決
 - **Cosmos パーティション化**: `/owner_id` でデータ分離
-- **HTTPS 全下行**: 通信完全暗号化
-- **グラフで関係を表現**: edges が todo の論理的な関連性を定義
+- **HTTPS 全通信**: 通信を常に暗号化
+- **グラフで関係を表現**: エッジが todo 間の論理的な関係を定義
 
-詳細は [DEPLOY_GUIDE-ja_JP.md](../handson/DEPLOY_GUIDE-ja_JP.md) を参照してください。
+Azure Portal ベースの手順は [DEPLOY_GUIDE_GUI-ja_JP.md](../handson/DEPLOY_GUIDE_GUI-ja_JP.md)、IaC ベースの手順は英語版 [DEPLOY_GUIDE.md](../handson/DEPLOY_GUIDE.md) を参照してください。

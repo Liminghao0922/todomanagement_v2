@@ -1,6 +1,6 @@
 # Todo Management v2 Deployment Guide (IaC track)
 
-[English](DEPLOY_GUIDE.md) | [简体中文](DEPLOY_GUIDE-zh_CN.md) | [日本語](DEPLOY_GUIDE-ja_JP.md)
+[English](DEPLOY_GUIDE.md) | [简体中文（Azure 门户版）](DEPLOY_GUIDE_GUI-zh_CN.md) | [日本語（Azure Portal 版）](DEPLOY_GUIDE_GUI-ja_JP.md)
 
 This document explains the full process, in English, of deploying the Todo Management v2 application to Azure using the Bicep templates under `infra/`.
 

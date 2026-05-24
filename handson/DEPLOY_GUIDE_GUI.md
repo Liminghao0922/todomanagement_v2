@@ -364,8 +364,9 @@ After creation:
       - **Audience**: Enter your `<entra-app-client-id>` as the audience. This is the value from the output for `az ad app list --display-name "Azure Cosmos DB MCP Toolkit API" --query "[0].appId" -o tsv`.
         ![Connect tool](image/DEPLOY_GUIDE_GUI/agent-connect-tool-02.png)
         e. Click **Connect**.
-4. **Save** the agent. Note its **Name** (e.g. `todomanagement-agent`) and **Version** (`3`).
-5. Test the agent.
+4. **Memory** → **Add** → **Create memory store**.
+5. **Save** the agent. Note its **Name** (e.g. `todomanagement-agent`) and **Version** (`3`).
+6. Test the agent.
    1. Enter the following message in the playground. Approve the tool-calling request when asked.
       `List all databases in my Cosmos DB account`
       ![Test Cosmos DB tool](image/DEPLOY_GUIDE_GUI/agent-test-cosmos-tool.png)
@@ -565,6 +566,4 @@ Manually delete the Entra ID app registration (`todomanagement-spa`) under **Mic
 ## Related Docs
 
 - [`handson/DEPLOY_GUIDE.md`](DEPLOY_GUIDE.md)
-- [`handson/QUICK_REFERENCE.md`](QUICK_REFERENCE.md)
-- [`handson/TROUBLESHOOTING.md`](TROUBLESHOOTING.md)
 - [`docs/ARCHITECTURE_GUIDE.md`](../docs/ARCHITECTURE_GUIDE.md)

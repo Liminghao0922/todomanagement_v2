@@ -54,13 +54,14 @@ npm run dev  # http://localhost:5173
 標準的なデプロイ手順:
 1. `infra/deploy.ps1` でインフラをデプロイ
 2. Function URL、SWA URL、Cosmos Endpoint、Entra App ID、Foundry リソース出力を控える
-3. Foundry Web UI で Agent を作成し、Built-in Graph/Cosmos ツールと `/api/tools/estimate-hours` を接続
+3. Azure AI Foundry ポータルで Agent を作成し、組み込みの Microsoft Graph/Cosmos ツールと `/api/tools/estimate-hours` を接続
 4. Function コードと Web 静的アセットをデプロイ
 5. Todo CRUD、AI 抽出、Timer スキャンを検証
 
-詳細は `handson/DEPLOY_GUIDE-ja_JP.md` を参照してください。
+Azure Portal ベースの手順は `handson/DEPLOY_GUIDE_GUI-ja_JP.md`、IaC ベースの手順は英語版 `handson/DEPLOY_GUIDE.md` を参照してください。
 
 ## 関連ドキュメント
 - `docs/ARCHITECTURE_GUIDE-ja_JP.md`
-- `handson/DEPLOY_GUIDE-ja_JP.md`
+- `handson/DEPLOY_GUIDE_GUI-ja_JP.md`
+- `handson/DEPLOY_GUIDE.md`
 - `infra/README.md`

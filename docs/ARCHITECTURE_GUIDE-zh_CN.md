@@ -160,4 +160,4 @@ Foundry Agent（gpt-4o-mini 驱动）
 - **HTTPS 全链路**：完全加密通信
 - **图表表达关系**：边定义 todos 的逻辑关系
 
-详见 [DEPLOY_GUIDE-zh_CN.md](../handson/DEPLOY_GUIDE-zh_CN.md)。
+Azure 门户路径详见 [DEPLOY_GUIDE_GUI-zh_CN.md](../handson/DEPLOY_GUIDE_GUI-zh_CN.md)，IaC 路径请参见英文版 [DEPLOY_GUIDE.md](../handson/DEPLOY_GUIDE.md)。

@@ -54,13 +54,14 @@ npm run dev  # http://localhost:5173
 标准部署流程:
 1. 运行 `infra/deploy.ps1` 部署基础设施
 2. 记录 Function URL、SWA URL、Cosmos Endpoint、Entra App ID、Foundry 资源输出
-3. 在 Foundry Web UI 创建 Agent，接入内置 Graph/Cosmos 工具与 `/api/tools/estimate-hours`
+3. 在 Azure AI Foundry 门户中创建 Agent，接入内置的 Microsoft Graph/Cosmos 工具与 `/api/tools/estimate-hours`
 4. 部署 Function 代码与 Web 静态资源
 5. 验证 Todo CRUD、AI 抽取、定时扫描流程
 
-完整中文部署说明见 `handson/DEPLOY_GUIDE-zh_CN.md`。
+Azure 门户部署说明见 `handson/DEPLOY_GUIDE_GUI-zh_CN.md`。IaC 路径目前请参见英文版 `handson/DEPLOY_GUIDE.md`。
 
 ## 相关文档
 - `docs/ARCHITECTURE_GUIDE-zh_CN.md`
-- `handson/DEPLOY_GUIDE-zh_CN.md`
+- `handson/DEPLOY_GUIDE_GUI-zh_CN.md`
+- `handson/DEPLOY_GUIDE.md`
 - `infra/README.md`
