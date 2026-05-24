@@ -2,7 +2,7 @@
 
 [English](DEPLOY_GUIDE_GUI.md) | [简体中文](DEPLOY_GUIDE_GUI-zh_CN.md) | [日本語](DEPLOY_GUIDE_GUI-ja_JP.md)
 
-This guide is the beginner-friendly path. Every Azure resource is created from the Azure Portal UI, with code-only steps reduced to copy-paste blocks. For the IaC-driven path, see [`DEPLOY_GUIDE.md`](DEPLOY_GUIDE.md).
+This guide follows the beginner-friendly path. Every Azure resource is created from the Azure Portal UI, with code-only steps reduced to copy-and-paste blocks. For the IaC-driven path, see [`DEPLOY_GUIDE.md`](DEPLOY_GUIDE.md).
 
 Estimated time: 90–120 minutes.
 
@@ -12,13 +12,13 @@ Estimated time: 90–120 minutes.
 
 | Term                           | Meaning in this hands-on                                                                                                                    |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Resource Group**             | Logical container for all v2 resources (default name `rg-todomanagementv2-dev`).                                                            |
-| **Function App**               | Azure Functions on a Linux Consumption (Y1) plan that hosts `src/api/`.                                                                     |
-| **Static Web App (SWA)**       | Hosts the Vue 3 SPA built from `src/web/`.                                                                                                  |
-| **Cosmos DB serverless**       | Stores SQL containers (`todos` / `owners` / `projects` / `conversations`) and the Gremlin graph (`todo-graph-db`/`todo-graph`).             |  
-| **Microsoft Foundry**          | Provides `gpt-4o-mini` and `text-embedding-3-small`.                                                                                        |
-| **App registration**           | Entra ID identity for the SPA (sign-in) and, optionally, server-to-Foundry consent.                                                         |
-| **Managed identity**           | The Function App's system-assigned identity used to obtain AAD tokens for Cosmos Gremlin and Azure OpenAI.                                  |
+| **Resource Group**       | Logical container for all v2 resources (default name `rg-todomanagementv2-dev`).                                                          |
+| **Function App**         | Azure Functions on a Linux Flex Consumption plan that hosts `src/api/`.                                                                  |
+| **Static Web App (SWA)** | Hosts the Vue 3 SPA built from `src/web/`.                                                                                                |
+| **Cosmos DB serverless** | Stores SQL containers (`todos` / `owners` / `projects` / `conversations`) and the Gremlin graph (`todo-graph-db`/`todo-graph`). |
+| **Microsoft Foundry**    | Provides `gpt-5.4-mini` and `text-embedding-3-small`.                                                                                   |
+| **App registration**     | Entra ID identity for the SPA (sign-in) and, optionally, server-to-Foundry consent.                                                         |
+| **Managed identity**     | The Function App's system-assigned identity used to obtain AAD tokens for Cosmos Gremlin and Azure OpenAI.                                  |
 
 ---
 
@@ -66,12 +66,12 @@ Estimated time: 90–120 minutes.
    After provisioning:
 9. Open the account → **Data Explorer** → **New Database** → ID `todo-db`. Then create four containers:
 
-   | Container                                                                                                                                            | Partition key |
-   | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-   | `todos`                                                                                                                                              | `/owner_id` |
-   | `owners`                                                                                                                                             | `/id`       |
-   | `projects`                                                                                                                                           | `/owner_id` |
-   | `conversations`                                                                                                                                      | `/owner_id` |
+   | Container         | Partition key |
+   | ----------------- | ------------- |
+   | `todos`         | `/owner_id` |
+   | `owners`        | `/id`       |
+   | `projects`      | `/owner_id` |
+   | `conversations` | `/owner_id` |
 
 ![Cosmos containers](image/DEPLOY_GUIDE_GUI/03-cosmos-containers.png)
 📖 Reference:[https://learn.microsoft.com/azure/cosmos-db/nosql/quickstart-portal](https://learn.microsoft.com/azure/cosmos-db/nosql/quickstart-portal)
@@ -141,7 +141,7 @@ After provisioning:
 2. Select `Flex Consumption`
 3. **Basics**:
    - Resource group: `rg-todomanagementv2-dev`
-   - Function App name: `func-todomanagement`, enable **Secure unique default hostname on.**
+   - Function App name: `func-todomanagement`, and enable **Secure unique default hostname**.
    - Region: same as RG
    - Runtime stack: `Python` 3.11
    - Instance size: `2048 MB`
@@ -176,7 +176,7 @@ After provisioning:
 4. **Advanced** choose `East Asia` for **Region for Azure Functions API and staging environments**
 5. **Review + create** → **Create**.
    ![Create Static Web App](image/DEPLOY_GUIDE_GUI/12-create-swa.png)
-6. After provisioning: open the SWA  copy the following information and save them for Phase 4.
+6. After provisioning, open the SWA, copy the following information, and save it for Phase 4.
    - **Manage deployment token**
    - **URL**
 
@@ -195,7 +195,7 @@ After provisioning:
 5. **Register**.
 
 After creation:
-6. Optional. If you want to execute the locally, execute this step. **Authentication** → **+ Add URI** → `http://localhost:5173/`. Save.
+6. Optional. If you want to run this locally, add the redirect URI in **Authentication** → **+ Add URI** → `http://localhost:5173/`, then save.
 7. From the **Overview** page, copy:
     - **Application (client) ID** → save as `CLIENT_ID`
     - **Directory (tenant) ID** → save as `TENANT_ID`
@@ -206,11 +206,11 @@ After creation:
 
 ---
 
-### 2.2 Grant the Function App's managed identity access to Cosmos and Foundry and Cosmos MCP Toolkit
+### 2.2 Grant the Function App's managed identity access to Cosmos, Foundry, and the Cosmos MCP Toolkit
 
 1. Assign `Cosmos DB Built-in Data Contributor` role to Function App's User Assigned Managed Identity.
    a. Open **Cloud Shell** and click **Switch to PowerShell** if the current session is not PowerShell from Azure Portal.
-   ![Switch to Bash](image/DEPLOY_GUIDE_GUI/cloudshell-switch-to-bash.png)
+   ![Switch to Bash](image/DEPLOY_GUIDE_GUI/cloudshell-switch-to-powershell.png)
    b. Run this command:
 
    ```bash
@@ -236,10 +236,7 @@ After creation:
    - Role `Foundry User`
    - Assign access to: **Managed identity** → select the **func-todomanagement-uami**.
      ![Assign Foundry User role to Function App](image/DEPLOY_GUIDE_GUI/assign-foundry-role-to-func.png)
-3. Grant `MCP Tool Executor` role to Function App's managed identity
-   a. **Microsoft Entra Id** → **Enterprise applications** → search `Azure Cosmos DB MCP Toolkit API` and open it.
-   ![Search MCP Toolkit App](image/DEPLOY_GUIDE_GUI/search-mcp-toolkit.png)
-   b. **Manage**  → **Users and groups** → **+ Add user/group**
+3. Grant the `MCP Tool Executor` role to the Function App's managed identity.
    a. Open **Cloud Shell** and click **Switch to PowerShell** if the current session is not PowerShell from Azure Portal.
    ![Switch to Bash](image/DEPLOY_GUIDE_GUI/cloudshell-switch-to-bash.png)
    b. Run this command:
@@ -252,7 +249,7 @@ After creation:
    $Resource = az ad sp list --display-name $ResourceName --query "{ AppRoleId: [0] .appRoles [?value=='$AppRoleName'].id | [0], ObjectId:[0] .id }" -o json | ConvertFrom-Json
 
    $Principal = az ad sp list --display-name $PrincipalName --query "{ ObjectId: [0] .id }" -o json | ConvertFrom-Json
-   
+
 
    $spObjectId = $Resource.ObjectId 
    $body = @{
@@ -260,7 +257,7 @@ After creation:
       resourceId = $Resource.ObjectId 
       appRoleId = $Resource.AppRoleId
    } | ConvertTo-Json
-         
+
    az rest --method POST `
       --url "https://graph.microsoft.com/v1.0/servicePrincipals/$spObjectId/appRoleAssignedTo" `
       --headers "Content-Type=application/json" `
@@ -274,41 +271,41 @@ After creation:
 
 ### 3.1 Deploy MCP tool for Cosmos DB
 
-1. Open the GitHub Repo [https://github.com/AzureCosmosDB/MCPToolKit#option-a-deploy-to-azure-button](https://github.com/AzureCosmosDB/MCPToolKit#option-a-deploy-to-azure-button)
+1. Open the GitHub repository [https://github.com/AzureCosmosDB/MCPToolKit#option-a-deploy-to-azure-button](https://github.com/AzureCosmosDB/MCPToolKit#option-a-deploy-to-azure-button)
 2. Click **Deploy to Azure**
 
    - Resource Group: `rg-todomanagementv2-dev`
    - Region: same as RG
-   - Cosmos Endpoint: specify the Cosmos DB Account created in step2, eg: `https://cosmos-todomanagement-v2.documents.azure.com:443/`
-   - Azure Ai Service Endpoint: specify the Foundry Project endpoint, eg: `https://foundry-todomanagement-v2.services.ai.azure.com/api/projects/proj-default`
+   - Cosmos Endpoint: specify the Cosmos DB account created in step 2, for example `https://cosmos-todomanagement-v2.documents.azure.com:443/`
+   - Azure AI Service Endpoint: specify the Foundry project endpoint, for example `https://foundry-todomanagement-v2.services.ai.azure.com/api/projects/proj-default`
    - Embedding Deployment Name: `text-embedding-3-small`
 3. **Review + create** → **Create**.
    ![Deploy cosmos MCP](image/DEPLOY_GUIDE_GUI/3-01-depoly-cosmos-mcp.png)
-4. Deploy MCP Server Application
+4. Deploy the MCP Server application.
    a. Open **Cloud Shell** and click **Switch to PowerShell** if the current session is not PowerShell from Azure Portal.
-   ![Switch to PowerShell](image/DEPLOY_GUIDE_GUI/3-02-switch-to-powershell.png)
-   b. Clone the repository via following command.
+   ![Switch to PowerShell](image/DEPLOY_GUIDE_GUI/cloudshell-switch-to-powershell.png)
+   b. Clone the repository with the following command.
 
    ```powershell
    git clone https://github.com/AzureCosmosDB/MCPToolKit.git
    cd MCPToolKit
    ```
 
-   c. Modify the script, as we execute the PowerShell script from Cloud Shell, the docker is not supported.
+   c. Modify the script. Because we run the PowerShell script from Cloud Shell, Docker is not supported.
 
    ```powershell
     copy ./scripts/Deploy-Cosmos-MCP-Toolkit.ps1 ./scripts/Deploy-Cosmos-MCP-Toolkit-CloudShellVersion.ps1
    ```
 
-   Click **Editor** and navigate to file `Deploy-Cosmos-MCP-Toolkit-CloudShellVersion.ps1`
-   Go to line 851, change it as below.
+   Click **Editor** and open `Deploy-Cosmos-MCP-Toolkit-CloudShellVersion.ps1`.
+   Go to line 851 and change it as shown below.
 
    ```powershell
    az acr login --name $ACR_NAME --resource-group $script:ACR_RESOURCE_GROUP --expose-token
    ```
 
-   Go to line 870, and comment out the line 870-882
-   Paste the following command to line 870.
+   Go to line 870, and comment out lines 870-882.
+   Replace line 870 with the following command.
 
    ```powershell
    az acr build -r $ACR_NAME --platform linux/amd64 -f Dockerfile.runtime . -t $IMAGE_TAG
@@ -316,14 +313,14 @@ After creation:
 
    ![modify script](image/DEPLOY_GUIDE_GUI/3-02-modify-script.png)
 
-   d.Run the deployment script from the repository root:
+   d. Run the deployment script from the repository root:
 
    ```powershell
    .\scripts\Deploy-Cosmos-MCP-Toolkit-CloudShellVersion.ps1 -ResourceGroup "rg-todomanagementv2-dev"
    ```
 
 5. Test Your Deployment
-   a. Search **Container Apps** → click the new created container app **mcp-toolkit-app**.
+   a. Search **Container Apps** → click the newly created container app **mcp-toolkit-app**.
    b. Click **Application Url** to open the MCP app in a new tab.
    c. Open **Cloud Shell** and click **Switch to Bash** if the current session is not Bash from Azure Portal.
    ![switch to bash](image/DEPLOY_GUIDE_GUI/cloudshell-switch-to-bash.png)
@@ -334,7 +331,7 @@ After creation:
    az account show --query "tenantId" -o tsv
    ```
 
-   e. Input client id and tenant id in MCP app, click **Sign In with Microsoft Entra**.
+   e. Enter the client ID and tenant ID in the MCP app, then click **Sign In with Microsoft Entra**.
    ![sign in with entra](image/DEPLOY_GUIDE_GUI/3-04-sign-in-with-entra.png)
    f. **Test Tool** → **Select Tool** as `List Databases`  → **Invoke Selected Tool** and make sure the correct result can be returned.
    ![Test tool List Databases](image/DEPLOY_GUIDE_GUI/3-05-test-tool.png)
@@ -345,17 +342,17 @@ After creation:
 
 ### 3.2 Create the agent
 
-1. Open the Foundry project → **Agents** → **Create agent** → Specify the agent name as `todomanagement-agent` → Create.
+1. Open the Foundry project → **Agents** → **Create agent** → specify the agent name as `todomanagement-agent` → Create.
    ![Create agent](image/DEPLOY_GUIDE_GUI/3-06-create-agent.png)
 2. Specify the following information.
    - **Model**: (`gpt-5.4-mini`)
-   - **Instructions** : Specify the content with [../prompt/todomanagement-agent.instructions.md](../prompt/todomanagement-agent.instructions.md)
+   - **Instructions**: specify the content in [../prompt/todomanagement-agent.instructions.md](../prompt/todomanagement-agent.instructions.md)
 3. **Tools**:
    1. Remove **Web search** tool
    2. Add **Azure Cosmos DB** tool
       a. **Add** → **Browse all tools**
       ![Browse all tools](image/DEPLOY_GUIDE_GUI/agent-add-tool.png)
-      b. **Catalog** → search `Azure Cosmos DB` → select the tool -> **Create**
+      b. **Catalog** → search `Azure Cosmos DB` → select the tool → **Create**
       ![Select Azure Cosmos DB tool](image/DEPLOY_GUIDE_GUI/agent-search-cosmos-tool.png)
       c. **Connect tool with endpoint**
       ![Connect tool](image/DEPLOY_GUIDE_GUI/agent-connect-tool.png)
@@ -367,23 +364,12 @@ After creation:
       - **Audience**: Enter your `<entra-app-client-id>` as the audience. This is the value from the output for `az ad app list --display-name "Azure Cosmos DB MCP Toolkit API" --query "[0].appId" -o tsv`.
         ![Connect tool](image/DEPLOY_GUIDE_GUI/agent-connect-tool-02.png)
         e. Click **Connect**.
-   3. Add **Work IQ Calendar** tool.
-      a. **Add** → **Browse all tools**
-      b. **Catalog** → search `Work IQ Calendar` → select the tool -> **Create**
-      ![Select Work IQ Calendar tool](image/DEPLOY_GUIDE_GUI/agent-search-work-iq-calendar-tool.png)
-      c. **Connect tool with endpoint**
-      ![Connect tool](image/DEPLOY_GUIDE_GUI/agent-connect-tool.png)
-      d. **Connect the Work IQ Calendar tool**
-      - **Name**: `WorkIQCalendar`
-      - **Authentication**: `Managed` OAuth Provider
-        ![Connect tool](image/DEPLOY_GUIDE_GUI/agent-connect-tool-03.png)
-        e. Click **Connect**.
 4. **Save** the agent. Note its **Name** (e.g. `todomanagement-agent`) and **Version** (`3`).
 5. Test the agent.
-   1. Input the message to below in the playground. Approve the tool calling approval request when asked.
+   1. Enter the following message in the playground. Approve the tool-calling request when asked.
       `List all databases in my Cosmos DB account`
       ![Test Cosmos DB tool](image/DEPLOY_GUIDE_GUI/agent-test-cosmos-tool.png)
-   2. Input the message to below in the playground. Approve the tool calling approval request when asked.
+   2. Enter the following message in the playground. Approve the tool-calling request when asked.
       `List all meetings in my calendar`
       ![Test WorkIQ Calendar tool](image/DEPLOY_GUIDE_GUI/agent-test-calendar-tool.png)
       📖 Reference: [https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/tool-catalog](https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/tool-catalog)
@@ -398,17 +384,17 @@ In the Function App → **Settings** → **Environment variables** → **+ Add**
 
 | Name                             | Value                                                                                                     |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `COSMOS_AUTH_MODE`               | `aad`                                                                                                     |
-| `COSMOS_AUTO_CREATE`             | `true`                                                                                                    |
-| `COSMOS_ENDPOINT`                | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.2                                   |
-| `COSMOS_DATABASE`                | `todo-db`                                                                                                 |
-| `COSMOS_GREMLIN_ENDPOINT`        | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.3                                   |
-| `COSMOS_GRAPH_DATABASE`          | `todo-graph-db`                                                                                           |
-| `COSMOS_GRAPH_NAME`              | `todo-graph`                                                                                              |
-| `FOUNDRY_AGENT_ENDPOINT`         | `https://<foundry>.services.ai.azure.com/api/projects/proj-default`, the project endpoint from step 1.4   |
-| `FOUNDRY_EMBEDDING_DEPLOYMENT`   | `text-embedding-3-small`                                                                                  |
-| `FOUNDRY_AGENT_NAME`             | `todomanagement-agent`, the agent name form step 3.2                                                      |
-| `FOUNDRY_AGENT_VERSION`          | e.g.`1` the version from step 3.2                                                                         |
+| `COSMOS_AUTH_MODE`             | `aad`                                                                                                   |
+| `COSMOS_AUTO_CREATE`           | `true`                                                                                                  |
+| `COSMOS_ENDPOINT`              | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.2                                 |
+| `COSMOS_DATABASE`              | `todo-db`                                                                                               |
+| `COSMOS_GREMLIN_ENDPOINT`      | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.3                                 |
+| `COSMOS_GRAPH_DATABASE`        | `todo-graph-db`                                                                                         |
+| `COSMOS_GRAPH_NAME`            | `todo-graph`                                                                                            |
+| `FOUNDRY_AGENT_ENDPOINT`       | `https://<foundry>.services.ai.azure.com/api/projects/proj-default`, the project endpoint from step 1.4 |
+| `FOUNDRY_EMBEDDING_DEPLOYMENT` | `text-embedding-3-small`                                                                                |
+| `FOUNDRY_AGENT_NAME`           | `todomanagement-agent`, the agent name from step 3.2                                                    |
+| `FOUNDRY_AGENT_VERSION`        | e.g.`1`, the version from step 3.2                                                                      |
 
 Click **Apply**.
 
@@ -420,10 +406,10 @@ Click **Apply**.
 
 ### 4.2 Repository Setup
 
-Create your repository from template, refer to [Creating a repository from a template (GitHub Docs)](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template)
+Create your repository from the template. See [Creating a repository from a template (GitHub Docs)](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template).
 
 1. Open the [template repository](https://github.com/Liminghao0922/todomanagement_v2)
-2. Click **Use this template** -> **Create a new repository**
+2. Click **Use this template** → **Create a new repository**
 3. Set:
    - **Repository name**: for example `my-todo-app-v2`
    - **Visibility**: `Public` (recommended for this workshop flow)
@@ -466,7 +452,6 @@ Reference: [Create an Azure service principal (MS Learn)](https://learn.microsof
    # Output as JSON (for later use)
    $sp | ConvertTo-Json
    ```
-
 3. Copy the JSON output (the entire `{...}` block)
 
 **Note:** This JSON output is sensitive. Keep it secure.
@@ -476,9 +461,9 @@ Reference: [Create an Azure service principal (MS Learn)](https://learn.microsof
 #### 4.3.2 Add GitHub Actions Secret
 
 1. In your GitHub repository, go to **Settings**
-2. In the left menu, click **Secrets and variables** > **Actions** > click **New repository secret**, and add these repository secretes.| Variable                            | Value                                                  | Reference       |
+2. In the left menu, click **Secrets and variables** > **Actions** > click **New repository secret**, and add these repository secrets.| Variable                            | Value                                                  | Reference       |
    | ----------------------------------- | ------------------------------------------------------ | --------------- |
-   | `AZURE_CREDENTIALS`               | Application's Credentials Json                         | From Step 4.2.1 |
+   | `AZURE_CREDENTIALS`               | Application's credentials JSON                         | From Step 4.3.1 |
    | `AZURE_STATIC_WEB_APPS_API_TOKEN` | Your Static Web App's**Manage deployment token** | From Step 1.6   |
 
  ![Add AZURE_CREDENTIALS secret](image/DEPLOY_GUIDE_GUI/github-add-cred.png)
@@ -493,10 +478,10 @@ In your GitHub repository **Settings** > **Secrets and variables** > **Actions**
 
 | Variable               | Value                                               | Reference     |
 | ---------------------- | --------------------------------------------------- | ------------- |
-| `AZURE_CLIENT_ID`      | Entra ID App Client ID                              | From Step 2.1 |
-| `AZURE_TENANT_ID`      | Entra ID App Tenant ID                              | From Step 2.1 |
-| `AZURE_REDIRECT_URI`   | Your static web App URL                             | From Step 1.6 |
-| `FUNCTION_APP_NAME`    | Your function app name, e.g.`func-todomanagement`   | From Step 1.5 |
+| `AZURE_CLIENT_ID`    | Entra ID App Client ID                              | From Step 2.1 |
+| `AZURE_TENANT_ID`    | Entra ID App Tenant ID                              | From Step 2.1 |
+| `AZURE_REDIRECT_URI` | Your static web App URL                             | From Step 1.6 |
+| `FUNCTION_APP_NAME`  | Your function app name, e.g.`func-todomanagement` | From Step 1.5 |
 
 ---
 
@@ -540,7 +525,7 @@ git push origin main
    - `Build and Deploy Web to ACR`
 3. If workflows don't show, ensure:
    - `.github/workflows/build-deploy-api.yml` and `.github/workflows/build-deploy-web.yml` are committed to `main`
-4. The workflows should trigger automatically on `main` branch commits
+4. The workflows should trigger automatically on commits to the `main` branch.
 5. Click on each workflow and monitor:
    - Check for any **red X** (failures) or **green checkmark** (success)
    - Both should complete within 5-10 minutes each
@@ -559,8 +544,8 @@ git push origin main
 2. **Todos** page → Click **Generate to Test Todos** (the demo seeding action) → verify todos.
    ![End-to-end check todos](image/DEPLOY_GUIDE_GUI/e2e-check-verify-todos.png)
 3. **Projects** → open a seeded project → **View Graph** → confirm Cytoscape renders edges from the Gremlin graph.
-      ![End-to-end check project](image/DEPLOY_GUIDE_GUI/e2e-check-verify-projects-01.png)
-      ![End-to-end check view project graph](image/DEPLOY_GUIDE_GUI/e2e-check-verify-projects-02.png)
+   ![End-to-end check project](image/DEPLOY_GUIDE_GUI/e2e-check-verify-projects-01.png)
+   ![End-to-end check view project graph](image/DEPLOY_GUIDE_GUI/e2e-check-verify-projects-02.png)
 4. **Chat** → send a message such as `What should I prioritize today?` → the Foundry agent should respond and possibly invoke the `Azure Cosmos DB` tool.
    ![End-to-end check chat](image/DEPLOY_GUIDE_GUI/e2e-check-verify-chat.png)
    ![End-to-end check chat tool call](image/DEPLOY_GUIDE_GUI/e2e-check-verify-chat-tool-call.png)
