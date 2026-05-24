@@ -553,14 +553,14 @@ git push origin main
 ## Phase 5. Validate End-to-End
 
 1. Open `https://<swa>.azurestaticapps.net` and sign in via MSAL.
-2. **Todos** page → **+ New todo** → fill in title and description → save.
-3. Search for a todo title; vector search should rank fuzzy matches.
-4. Click **Generate todos** (the demo seeding action) → verify projects + todos in Cosmos **Data Explorer**.
-5. **Projects** → open a seeded project → **Project Graph** → confirm Cytoscape renders edges from the Gremlin graph.
-6. **Chat** → send a message such as `Estimate the hours for "Migrate API to Functions"` → the Foundry agent should respond and possibly invoke the `estimate_hours` tool.
-7. Confirm transcript persistence: in Cosmos Data Explorer, open the `conversations` container; you should see new documents partitioned by `owner_id`.
-
-![End-to-end check](image/DEPLOY_GUIDE_GUI/13-e2e-check.png)
+2. **Todos** page → Click **Generate to Test Todos** (the demo seeding action) → verify todos.
+   ![End-to-end check todos](image/DEPLOY_GUIDE_GUI/e2e-check-verify-todos.png)
+3. **Projects** → open a seeded project → **View Graph** → confirm Cytoscape renders edges from the Gremlin graph.
+      ![End-to-end check project](image/DEPLOY_GUIDE_GUI/e2e-check-verify-projects-01.png)
+      ![End-to-end check view project graph](image/DEPLOY_GUIDE_GUI/e2e-check-verify-projects-02.png)
+4. **Chat** → send a message such as `What should I prioritize today?` → the Foundry agent should respond and possibly invoke the `Azure Cosmos DB` tool.
+   ![End-to-end check chat](image/DEPLOY_GUIDE_GUI/e2e-check-verify-chat.png)
+   ![End-to-end check chat tool call](image/DEPLOY_GUIDE_GUI/e2e-check-verify-chat-tool-call.png)
 
 ---
 
