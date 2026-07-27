@@ -2,37 +2,9 @@
 
 [English](DEPLOY_GUIDE_GUI.md) | [简体中文](DEPLOY_GUIDE_GUI-zh_CN.md) | [日本語](DEPLOY_GUIDE_GUI-ja_JP.md)
 
-This guide follows the beginner-friendly path. Learners do not need a GitHub account or prior Git knowledge: Azure resources are created in the Azure Portal, and the application is built and deployed from Azure Cloud Shell. Instructors prepare the shared MCP container image by following [`INSTRUCTOR_PREP_GUIDE.md`](INSTRUCTOR_PREP_GUIDE.md). For the IaC-driven path, see [`DEPLOY_GUIDE.md`](DEPLOY_GUIDE.md).
+This guide follows the beginner-friendly path. Every Azure resource is created from the Azure Portal UI, with code-only steps reduced to copy-and-paste blocks. For the IaC-driven path, see [`DEPLOY_GUIDE.md`](DEPLOY_GUIDE.md).
 
 Estimated time: 90–120 minutes.
-
----
-
-## Before You Start
-
-Get these eight items from the instructor:
-
-- Todo Management v2 public repository URL
-- Workshop ACR login server, for example `workshopacr.azurecr.io`
-- MCP image name, `mcp-toolkit`
-- MCP image tag, for example `workshop-20260727`
-- Assigned Container Apps environment, for example `cae-todomanagement-workshop-01`
-- Environment resource group, for example `rg-todomanagement-instructor`
-- Environment region, for example `japaneast`
-- Your unique Container App name, for example `mcp-toolkit-p01`
-
-You only need a browser, internet access, an Azure subscription, and permission to use [Azure Cloud Shell](https://learn.microsoft.com/azure/cloud-shell/overview). Select **PowerShell** when Cloud Shell asks which shell to use.
-
-You will follow one route:
-
-1. Create Azure resources in the Portal.
-2. Configure two Entra app registrations and managed identities.
-3. Deploy the instructor-provided MCP image to Container Apps.
-4. Create and connect the Foundry agent.
-5. Clone the public source and deploy the API and web app from Cloud Shell.
-6. Test the application, then delete the workshop resources.
-
-You do not create a GitHub repository, credentials, secrets, or workflows.
 
 ---
 
@@ -96,10 +68,10 @@ You do not create a GitHub repository, credentials, secrets, or workflows.
 
    | Container         | Partition key |
    | ----------------- | ------------- |
-   | `todos`           | `/owner_id`   |
-   | `owners`          | `/id`         |
-   | `projects`        | `/owner_id`   |
-   | `conversations`   | `/owner_id`   |
+   | `todos`         | `/owner_id` |
+   | `owners`        | `/id`       |
+   | `projects`      | `/owner_id` |
+   | `conversations` | `/owner_id` |
 
 ![Cosmos containers](image/DEPLOY_GUIDE_GUI/03-cosmos-containers.png)
 📖 Reference:[https://learn.microsoft.com/azure/cosmos-db/nosql/quickstart-portal](https://learn.microsoft.com/azure/cosmos-db/nosql/quickstart-portal)
@@ -234,52 +206,27 @@ After creation:
 
 ---
 
-### 2.2 Register the MCP API in Microsoft Entra ID
-
-The shared image is only application code. Each learner creates a separate identity for their own MCP endpoint.
-
-1. Open **Microsoft Entra ID** → **App registrations** → **+ New registration**.
-2. Name: `todomanagementv2-mcp-api`.
-3. Supported account types: **Accounts in this organizational directory only**.
-4. Leave **Redirect URI** empty, then select **Register**.
-5. Copy the **Application (client) ID** and save it as `MCP_CLIENT_ID`.
-6. Open **Expose an API** → **Add** next to **Application ID URI** → accept `api://<MCP_CLIENT_ID>`.
-7. Open **App roles** → **Create app role** and enter:
-
-   | Setting | Value |
-   | --- | --- |
-   | Display name | `MCP Tool Executor` |
-   | Allowed member types | `Both (Users/Groups + Applications)` |
-   | Value | `Mcp.Tool.Executor` |
-   | Description | `Execute Cosmos DB MCP tools` |
-   | Enable this app role | Checked |
-
-8. Select **Apply**.
-
-You add the Container App redirect URIs after its URL exists in Phase 3.
-
----
-
-### 2.3 Grant application identities access
+### 2.2 Grant the Function App's managed identity access to Cosmos, Foundry, and the Cosmos MCP Toolkit
 
 1. Assign `Cosmos DB Built-in Data Contributor` role to Function App's User Assigned Managed Identity.
-   a. Open **Cloud Shell** in the Azure Portal and select **PowerShell**.
+   a. Open **Cloud Shell** and click **Switch to PowerShell** if the current session is not PowerShell from Azure Portal.
+   ![Switch to Bash](image/DEPLOY_GUIDE_GUI/cloudshell-switch-to-powershell.png)
    b. Run this command:
 
-    ```powershell
-    az cosmosdb sql role assignment create `
-       --account-name "<your-cosmos-db-account-name>" `
-       --resource-group "<your-resource-group-name>" `
-       --role-definition-id "00000000-0000-0000-0000-000000000002" `
-       --principal-id "<your-azure-function-uami-id>" `
-       --scope "/"
+   ```bash
+   az cosmosdb sql role assignment create \
+    --account-name "<your-cosmos-db-account-name>" \
+    --resource-group "<your-resource-group-name>" \
+    --role-definition-id "00000000-0000-0000-0000-000000000002" \
+    --principal-id "<your-azure-function-uami-id>" \
+    --scope "/"
 
-    az cosmosdb sql role assignment create `
-       --account-name "<your-cosmos-gremlin-db-account-name>" `
-       --resource-group "<your-resource-group-name>" `
-       --role-definition-id "00000000-0000-0000-0000-000000000002" `
-       --principal-id "<your-azure-function-uami-id>" `
-       --scope "/"
+   az cosmosdb sql role assignment create \
+    --account-name "<your-cosmos-gremlin-db-account-name>" \
+    --resource-group "<your-resource-group-name>" \
+    --role-definition-id "00000000-0000-0000-0000-000000000002" \
+    --principal-id "<your-azure-function-uami-id>" \
+    --scope "/"
    ```
 
    ![Assign Cosmos DB Built-in Data Contributor role to Function App](image/DEPLOY_GUIDE_GUI/assign-cosmos-role-to-func.png)
@@ -289,14 +236,16 @@ You add the Container App redirect URIs after its URL exists in Phase 3.
    - Role `Foundry User`
    - Assign access to: **Managed identity** → select the **func-todomanagement-uami**.
      ![Assign Foundry User role to Function App](image/DEPLOY_GUIDE_GUI/assign-foundry-role-to-func.png)
-3. Grant the `MCP Tool Executor` role to the Foundry project's managed identity.
-   a. Use the same Cloud Shell PowerShell session.
+3. Grant the `MCP Tool Executor` role to the Function App's managed identity.
+   a. Open **Cloud Shell** and click **Switch to PowerShell** if the current session is not PowerShell from Azure Portal.
+   ![Switch to Bash](image/DEPLOY_GUIDE_GUI/cloudshell-switch-to-bash.png)
    b. Run this command:
 
    ```powershell
-   $ResourceName = "todomanagementv2-mcp-api"
+   $TenantDomain = "<Specify your tenant id>"
+   $ResourceName = "Azure Cosmos DB MCP Toolkit API"
    $AppRoleName = "Mcp.Tool.Executor"
-   $PrincipalName = "<your-foundry-resource-name>/projects/proj-default"
+   $PrincipalName = "foundry-todomanagement-v2/projects/proj-default"
    $Resource = az ad sp list --display-name $ResourceName --query "{ AppRoleId: [0] .appRoles [?value=='$AppRoleName'].id | [0], ObjectId:[0] .id }" -o json | ConvertFrom-Json
 
    $Principal = az ad sp list --display-name $PrincipalName --query "{ ObjectId: [0] .id }" -o json | ConvertFrom-Json
@@ -322,121 +271,72 @@ You add the Container App redirect URIs after its URL exists in Phase 3.
 
 ### 3.1 Deploy MCP tool for Cosmos DB
 
-Before the workshop, the instructor builds the MCP Toolkit image and shares these values:
+1. Open the GitHub repository [https://github.com/AzureCosmosDB/MCPToolKit#option-a-deploy-to-azure-button](https://github.com/AzureCosmosDB/MCPToolKit#option-a-deploy-to-azure-button)
+2. Click **Deploy to Azure**
 
-| Value | Example |
-| --- | --- |
-| Registry | `workshopacr.azurecr.io` |
-| Image | `mcp-toolkit` |
-| Tag | `workshop-20260727` |
-| Container Apps environment | `cae-todomanagement-workshop-01` |
-| Environment resource group | `rg-todomanagement-instructor` |
-| Environment region | `japaneast` |
-| Container App name | `mcp-toolkit-p01` |
-
-The instructor has already created the shared Container Apps environment and granted you permission to deploy your Container App into it. Do not create another environment, clone the MCP Toolkit repository, or build an image during the hands-on.
-
-#### 3.1.1 Create a placeholder Container App
-
-1. Search **Container Apps** → **+ Create**.
-2. On **Basics**:
-   - Resource group: `rg-todomanagementv2-dev`
-   - Container app name: the unique name assigned by the instructor, for example `mcp-toolkit-p01`
-   - Region: the instructor-provided environment region
-   - Container Apps environment: select the environment assigned by the instructor, for example `cae-todomanagement-workshop-01`
-3. On **Container**:
-   - Use quickstart image: **Checked**
-   - CPU: `0.5`
-   - Memory: `1 GiB`
-4. On **Scale**:
-   - Minimum replicas: `0`
-   - Maximum replicas: `1`
-5. On **Ingress**, leave ingress **Disabled** while the quickstart image is only a placeholder.
-6. Select **Review + create** → **Create**.
-
-If the assigned environment is not selectable, confirm the subscription, environment resource group, and region with the instructor. The instructor must grant your account **Container Apps Contributor** at the assigned environment's scope. Do not create a replacement environment.
-
-#### 3.1.2 Enable identity and deploy the MCP image
-
-The Portal does not expose Container App identity settings on the initial creation page. The placeholder app allows its system-assigned identity to exist before the private image is configured.
-
-1. Open your new Container App → **Settings** → **Identity** → **System assigned**.
-2. Set **Status** to **On** → **Save**.
-3. Open the instructor-provided Container Registry → **Access control (IAM)** → **+ Add role assignment**.
-4. Assign **AcrPull** to the managed identity with your assigned Container App name, for example `mcp-toolkit-p01`.
-5. Wait a few minutes for the role assignment to propagate.
-6. Return to your Container App → **Application** → **Containers** → **Edit and deploy**.
-7. Select the existing container and configure:
-   - Image source: **Azure Container Registry**
-   - Authentication type: **Managed identity**
-   - Managed identity: **System assigned**
-   - Registry: the instructor-provided registry
-   - Image and tag: the instructor-provided values
-   - CPU: `0.5`
-   - Memory: `1 GiB`
-8. Add these environment variables:
-
-   | Name | Value |
-   | --- | --- |
-   | `AzureAd__ClientId` | Your `MCP_CLIENT_ID` from Phase 2 |
-   | `AzureAd__TenantId` | Your `TENANT_ID` from Phase 2 |
-   | `AzureAd__Audience` | Your `MCP_CLIENT_ID` from Phase 2 |
-   | `COSMOS_ENDPOINT` | NoSQL endpoint from Step 1.2 |
-   | `OPENAI_ENDPOINT` | Foundry project endpoint from Step 1.4 |
-   | `OPENAI_EMBEDDING_DEPLOYMENT` | `text-embedding-3-small` |
-   | `ASPNETCORE_ENVIRONMENT` | `Production` |
-   | `ASPNETCORE_URLS` | `http://+:8080` |
-
-9. Select **Save** → **Create** to deploy the new revision.
-10. Open **Settings** → **Ingress** and configure:
-    - Ingress: **Enabled**
-    - Ingress traffic: **Accepting traffic from anywhere**
-    - Ingress type: **HTTP**
-    - Target port: `8080`
-11. Save and confirm that the new revision becomes **Running**.
-
-If the registry or image is not selectable, stop and ask the instructor to confirm your access to the workshop ACR. Do not enable the ACR admin user or use registry passwords.
-
-#### 3.1.3 Grant the Container App runtime permissions
-
-1. Open the Cosmos DB for NoSQL account → **Access control (IAM)** and assign **Cosmos DB Account Reader Role** to the Container App managed identity.
-2. In Cloud Shell PowerShell, grant the Cosmos data-plane reader role:
+   - Resource Group: `rg-todomanagementv2-dev`
+   - Region: same as RG
+   - Cosmos Endpoint: specify the Cosmos DB account created in step 2, for example `https://cosmos-todomanagement-v2.documents.azure.com:443/`
+   - Azure AI Service Endpoint: specify the Foundry project endpoint, for example `https://foundry-todomanagement-v2.services.ai.azure.com/api/projects/proj-default`
+   - Embedding Deployment Name: `text-embedding-3-small`
+3. **Review + create** → **Create**.
+   ![Deploy cosmos MCP](image/DEPLOY_GUIDE_GUI/3-01-depoly-cosmos-mcp.png)
+4. Deploy the MCP Server application.
+   a. Open **Cloud Shell** and click **Switch to PowerShell** if the current session is not PowerShell from Azure Portal.
+   ![Switch to PowerShell](image/DEPLOY_GUIDE_GUI/cloudshell-switch-to-powershell.png)
+   b. Clone the repository with the following command.
 
    ```powershell
-   $resourceGroup = "rg-todomanagementv2-dev"
-   $cosmosAccount = "<your-nosql-account-name>"
-   $mcpAppName = "<your-assigned-container-app-name>"
-   $mcpPrincipalId = az containerapp identity show `
-     --resource-group $resourceGroup `
-     --name $mcpAppName `
-     --query principalId -o tsv
-
-   az cosmosdb sql role assignment create `
-     --account-name $cosmosAccount `
-     --resource-group $resourceGroup `
-     --role-definition-id "00000000-0000-0000-0000-000000000001" `
-     --principal-id $mcpPrincipalId `
-     --scope "/"
+   git clone https://github.com/AzureCosmosDB/MCPToolKit.git
+   cd MCPToolKit
    ```
 
-3. Open the Foundry project → **Access control (IAM)** and assign **Foundry User** to the same managed identity.
-4. Restart the Container App revision after role assignments have propagated.
+   c. Modify the script. Because we run the PowerShell script from Cloud Shell, Docker is not supported.
 
-#### 3.1.4 Complete MCP authentication and test
+   ```powershell
+    copy ./scripts/Deploy-Cosmos-MCP-Toolkit.ps1 ./scripts/Deploy-Cosmos-MCP-Toolkit-CloudShellVersion.ps1
+   ```
 
-1. Open your assigned Container App and copy its **Application URL**.
-2. Open **Microsoft Entra ID** → **App registrations** → `todomanagementv2-mcp-api` → **Authentication**.
-3. Add the following **Single-page application (SPA)** redirect URIs, then save:
-   - `https://<mcp-app-url>/`
-   - `https://<mcp-app-url>/signin-oidc`
-4. Open **Enterprise applications** → `todomanagementv2-mcp-api` → **Users and groups** → **+ Add user/group**.
-5. Assign your user the **MCP Tool Executor** role.
-6. Open the Container App URL, enter `MCP_CLIENT_ID` and `TENANT_ID`, then sign in.
-7. Select **Test Tool** → `List Databases` → **Invoke Selected Tool**.
+   Click **Editor** and open `Deploy-Cosmos-MCP-Toolkit-CloudShellVersion.ps1`.
+   Go to line 851 and change it as shown below.
 
-The instructor image contains no learner credentials or endpoints. All tenant-specific values are configured in your Container App.
+   ```powershell
+   az acr login --name $ACR_NAME --resource-group $script:ACR_RESOURCE_GROUP --expose-token
+   ```
 
-📖 Reference: [Azure Cosmos DB MCP Toolkit](https://github.com/AzureCosmosDB/MCPToolKit)
+   Go to line 870, and comment out lines 870-882.
+   Replace line 870 with the following command.
+
+   ```powershell
+   az acr build -r $ACR_NAME --platform linux/amd64 -f Dockerfile.runtime . -t $IMAGE_TAG
+   ```
+
+   ![modify script](image/DEPLOY_GUIDE_GUI/3-02-modify-script.png)
+
+   d. Run the deployment script from the repository root:
+
+   ```powershell
+   .\scripts\Deploy-Cosmos-MCP-Toolkit-CloudShellVersion.ps1 -ResourceGroup "rg-todomanagementv2-dev"
+   ```
+
+5. Test Your Deployment
+   a. Search **Container Apps** → click the newly created container app **mcp-toolkit-app**.
+   b. Click **Application Url** to open the MCP app in a new tab.
+   c. Open **Cloud Shell** and click **Switch to Bash** if the current session is not Bash from Azure Portal.
+   ![switch to bash](image/DEPLOY_GUIDE_GUI/cloudshell-switch-to-bash.png)
+   d. Execute the following command to get client id, tenant id, and save them.
+
+   ```bash
+   az ad app list --display-name "Azure Cosmos DB MCP Toolkit API" --query "[0].appId" -o tsv
+   az account show --query "tenantId" -o tsv
+   ```
+
+   e. Enter the client ID and tenant ID in the MCP app, then click **Sign In with Microsoft Entra**.
+   ![sign in with entra](image/DEPLOY_GUIDE_GUI/3-04-sign-in-with-entra.png)
+   f. **Test Tool** → **Select Tool** as `List Databases`  → **Invoke Selected Tool** and make sure the correct result can be returned.
+   ![Test tool List Databases](image/DEPLOY_GUIDE_GUI/3-05-test-tool.png)
+
+📖 Reference: [https://github.com/AzureCosmosDB/MCPToolKit](https://github.com/AzureCosmosDB/MCPToolKit)
 
 ---
 
@@ -458,7 +358,7 @@ The instructor image contains no learner credentials or endpoints. All tenant-sp
       ![Connect tool](image/DEPLOY_GUIDE_GUI/agent-connect-tool.png)
       d. **Connect the Azure Cosmos DB tool**
       - **Name**: `AzureCosmosDB`
-      - **Remote MCP Server endpoint**: `<container-application-url>/mcp`, for example `https://mcp-toolkit-p01.livelyforest-279726ad.japaneast.azurecontainerapps.io/mcp`.
+      - **Remote MCP Server endpoint**: `<container-application-url>/mcp`, eg `https://mcp-toolkit-app.livelyforest-279726ad.japaneast.azurecontainerapps.io/mcp`.
       - **Authentication**: `Microsoft Entra`
       - **Type**: `Project Managed Identity`
       - **Audience**: Enter your `<entra-app-client-id>` as the audience. This is the value from the output for `az ad app list --display-name "Azure Cosmos DB MCP Toolkit API" --query "[0].appId" -o tsv`.
@@ -502,130 +402,137 @@ Click **Apply**.
 
 ---
 
-### 4.2 Clone the application source in Cloud Shell
+### 4.2 Repository Setup
 
-1. Open **Cloud Shell** in the Azure Portal and select **PowerShell**.
-2. Clone the public repository provided by the instructor:
+Create your repository from the template. See [Creating a repository from a template (GitHub Docs)](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template).
 
-   ```powershell
-   Set-Location $HOME
-   Remove-Item -Recurse -Force todomanagement_v2 -ErrorAction SilentlyContinue
-   git clone https://github.com/Liminghao0922/todomanagement_v2.git
-
-   $repoRoot = "$HOME/todomanagement_v2"
-   Set-Location $repoRoot
-   Get-ChildItem src
-   ```
-
-   The expected folders under `src` are `api` and `web`. This is the only Git command used in the participant guide; you do not need to create or sign in to a GitHub account.
-
-3. Confirm the correct Azure subscription:
-
-   ```powershell
-   az account show --output table
-
-   # Use this only when you need to switch subscriptions.
-   # az account set --subscription "<subscription-id>"
-   ```
+1. Open the [template repository](https://github.com/Liminghao0922/todomanagement_v2)
+2. Click **Use this template** → **Create a new repository**
+3. Set:
+   - **Repository name**: for example `my-todo-app-v2`
+   - **Visibility**: `Public` (recommended for this workshop flow)
+4. Click **Create repository from template**
+5. Wait for the repository to be created
 
 ---
 
-### 4.3 Deploy the API with Azure Functions Core Tools
+### 4.3 GitHub Actions Configuration
 
-1. Check the tools available in Cloud Shell:
+Configure GitHub Actions with your Azure credentials and resource details first, then enable workflow files to avoid empty/failed initial runs.
 
-   ```powershell
-   az version
-   python --version
-   func --version
-   node --version
-   npm --version
-   ```
+#### 4.3.1 Create Azure Service Principal and Credentials
 
-   Confirm Python `3.11`, Functions Core Tools `4.x`, and Node.js `20.x`. If a command is unavailable or reports a different major version, stop and ask the instructor; the instructor should verify the workshop Cloud Shell environment before the session.
+Reference: [Create an Azure service principal (MS Learn)](https://learn.microsoft.com/en-us/azure/developer/github/publish-docker-container)
 
-2. Publish the Python application. Core Tools reads `requirements.txt` and performs the deployment build:
+1. Open **Azure Cloud Shell** in Azure Portal
+2. Run this command to create a service principal scoped to your resource group:
 
    ```powershell
-   $functionAppName = "<your-function-app-name>"
+   # Check current subscription
+   az account show
 
-   Set-Location "$repoRoot\src\api"
-   func azure functionapp publish $functionAppName --python
+   # Switch to a different subscription (if needed)
+   # Replace `<subscription-id>` with your subscription ID from Phase 1 summary (Step 1.9).
+   az account set --subscription "<subscription-id>"
+
+   # Set variables
+   $subscriptionId = $(az account show --query id -o tsv)
+   $spName = "github-todomanagementv2-ci"
+   # Replace with your resource group name from Phase 1 summary (Step 1.9) if you changed it.
+   $resourceGroupName = "rg-todomanagementv2-dev"
+   # Create service principal
+   $sp = az ad sp create-for-rbac `
+   --name $spName `
+   --role "Owner" `
+   --scopes "/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName" `
+   --json-auth | ConvertFrom-Json
+
+   # Output as JSON (for later use)
+   $sp | ConvertTo-Json
    ```
+3. Copy the JSON output (the entire `{...}` block)
 
-3. Verify the API:
-
-   ```powershell
-   Invoke-RestMethod "https://$functionAppName.azurewebsites.net/api/health"
-   ```
-
-Expected result: `status` is `healthy`.
-
-📖 Reference: [Publish to Azure with Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local#publish-to-azure)
+**Note:** This JSON output is sensitive. Keep it secure.
 
 ---
 
-### 4.4 Build and deploy the web app with Static Web Apps CLI
+#### 4.3.2 Add GitHub Actions Secret
 
-The Vite settings below are build-time values. Replace every placeholder before running the build.
+1. In your GitHub repository, go to **Settings**
+2. In the left menu, click **Secrets and variables** > **Actions** > click **New repository secret**, and add these repository secrets.| Variable                            | Value                                                  | Reference       |
+   | ----------------------------------- | ------------------------------------------------------ | --------------- |
+   | `AZURE_CREDENTIALS`               | Application's credentials JSON                         | From Step 4.3.1 |
+   | `AZURE_STATIC_WEB_APPS_API_TOKEN` | Your Static Web App's**Manage deployment token** | From Step 1.6   |
+
+ ![Add AZURE_CREDENTIALS secret](image/DEPLOY_GUIDE_GUI/github-add-cred.png)
+
+---
+
+#### 4.3.3 Add GitHub Repository Variables
+
+Reference: [Using variables in GitHub Actions (GitHub Docs)](https://docs.github.com/en/actions/learn-github-actions/variables)
+
+In your GitHub repository **Settings** > **Secrets and variables** > **Actions**, click **Variables**, and add these repository variables:
+
+| Variable               | Value                                               | Reference     |
+| ---------------------- | --------------------------------------------------- | ------------- |
+| `AZURE_CLIENT_ID`    | Entra ID App Client ID                              | From Step 2.1 |
+| `AZURE_TENANT_ID`    | Entra ID App Tenant ID                              | From Step 2.1 |
+| `AZURE_REDIRECT_URI` | Your static web App URL                             | From Step 1.6 |
+| `FUNCTION_APP_NAME`  | Your function app name, e.g.`func-todomanagement` | From Step 1.5 |
+
+---
+
+#### 4.3.4 Prepare workflow files
+
+Reference: [GitHub Actions documentation](https://docs.github.com/en/actions)
+
+After secrets and variables are configured, enable workflow files.
+
+In your repository, CI/CD workflow files are provided as templates:
+
+- `.github/workflows/build-deploy-api.yml.template` → rename to `build-deploy-api.yml`
+- `.github/workflows/build-deploy-web.yml.template` → rename to `build-deploy-web.yml`
+
+To create the files:
+
+1. Open **Azure Cloud Shell** in Azure Portal
+2. Run this command:
 
 ```powershell
-$env:VITE_AZURE_CLIENT_ID = "<CLIENT_ID-from-Step-2.1>"
-$env:VITE_AZURE_AUTHORITY = "https://login.microsoftonline.com/<TENANT_ID-from-Step-2.1>"
-$env:VITE_AZURE_REDIRECT_URI = "https://<your-static-web-app>.azurestaticapps.net/"
+git clone <your-repo-url>
+cd my-todo-app
 
-Set-Location "$repoRoot\src\web"
-npm ci
-npm run build
+# Copy templates without .template extension
+cp .github/workflows/build-deploy-api.yml.template .github/workflows/build-deploy-api.yml
+cp .github/workflows/build-deploy-web.yml.template .github/workflows/build-deploy-web.yml
 
-# Vite does not copy this root-level file automatically.
-Copy-Item staticwebapp.config.json dist/staticwebapp.config.json -Force
+# Commit and push
+git add .github/workflows/*.yml
+git commit -m "Enable API and Web build-deploy workflows"
+git push origin main
 ```
 
-1. In the Azure Portal, open the Static Web App → **Overview** → **Manage deployment token**.
-2. Copy the token. Do not paste it into the guide, chat, or a shared file.
-3. Return to Cloud Shell PowerShell and set it only for the current shell session:
-
-   ```powershell
-   $env:SWA_CLI_DEPLOYMENT_TOKEN = "<paste-deployment-token>"
-
-   npx --yes @azure/static-web-apps-cli@latest deploy ./dist `
-     --env production `
-     --deployment-token $env:SWA_CLI_DEPLOYMENT_TOKEN
-
-   Remove-Item Env:SWA_CLI_DEPLOYMENT_TOKEN
-   ```
-
-📖 Reference: [Deploy with Static Web Apps CLI](https://learn.microsoft.com/azure/static-web-apps/static-web-apps-cli-deploy)
-
 ---
 
-### 4.5 Link the Function App backend
+#### 4.3.5 Run GitHub Actions Workflows
 
-This step makes browser requests to `/api/*` reach your separate Function App.
+1. In your repository, go to the **Actions** tab
+2. You should see both workflows listed:
+   - `Build and Deploy API to ACR`
+   - `Build and Deploy Web to ACR`
+3. If workflows don't show, ensure:
+   - `.github/workflows/build-deploy-api.yml` and `.github/workflows/build-deploy-web.yml` are committed to `main`
+4. The workflows should trigger automatically on commits to the `main` branch.
+5. Click on each workflow and monitor:
+   - Check for any **red X** (failures) or **green checkmark** (success)
+   - Both should complete within 5-10 minutes each
 
-1. Open the Static Web App in the Azure Portal.
-2. Select **Settings** → **APIs**.
-3. On the **Production** row, select **Link**.
-4. Set:
-   - Backend resource type: **Function App**
-   - Subscription: your subscription
-   - Resource name: your Function App
-   - Backend slot: **Production**
-5. Select **Link**.
+**Troubleshooting workflow failures:**
 
-The Static Web App must use the **Standard** plan for this integration.
-
-📖 Reference: [Bring your own functions to Azure Static Web Apps](https://learn.microsoft.com/azure/static-web-apps/functions-bring-your-own)
-
----
-
-### 4.6 Deployment checkpoint
-
-- Function health URL returns `healthy`.
-- Static Web App **APIs** shows the linked Function App.
-- Static Web App URL loads the sign-in page.
-- No GitHub repository, service principal, secret, or workflow was created.
+- Check **AZURE_CREDENTIALS** is valid JSON
+- Ensure all variables are filled
+- Check that Azure resources exist and names match exactly
 
 ---
 
