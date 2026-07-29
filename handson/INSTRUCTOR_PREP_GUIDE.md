@@ -1,5 +1,7 @@
 # Instructor Preparation Guide
 
+[English](INSTRUCTOR_PREP_GUIDE.md) | [简体中文](INSTRUCTOR_PREP_GUIDE-zh_CN.md) | [日本語](INSTRUCTOR_PREP_GUIDE-ja_JP.md)
+
 [Participant guide](DEPLOY_GUIDE_GUI.md)
 
 Use this guide before the workshop. Participants do not need GitHub accounts and do not build containers. The instructor prepares:
@@ -126,7 +128,7 @@ Container Apps pull the image with managed identity.
 
 ## 4. Give participants workshop ACR access
 
-Participants first create a placeholder Container App, enable its system-assigned identity, grant that identity `AcrPull`, and then replace the placeholder with the shared image. A shared user-assigned identity is intentionally not used because attaching and selecting it adds Portal steps without simplifying this workshop.
+Participants select the shared image directly while creating their Container App in the Portal. The shared user-assigned identity created in the next section has `AcrPull` and is attached to each workshop Container Apps environment.
 
 For each participant:
 
@@ -136,7 +138,7 @@ For each participant:
 4. Select **User, group, or service principal**.
 5. Select the participant account and complete the assignment.
 
-> `Owner` is a workshop shortcut that lets participants create the required `AcrPull` assignment without instructor intervention. Do not use this broad role for normal application users in production. In production, a platform owner should grant only `AcrPull` to each Container App managed identity.
+> `Owner` is a workshop shortcut that lets participants browse and select the shared ACR image during Container App creation. Do not use this broad role for normal application users in production.
 
 Keep the ACR admin user disabled.
 
@@ -181,7 +183,7 @@ az role assignment create `
   --scope $acrId
 ```
 
-The role is scoped to the workshop ACR. Assigning this identity to an environment does not automatically configure its Container Apps to pull images with that identity; image registry authentication remains configured on each Container App.
+The role is scoped to the workshop ACR and allows participants to select the shared image directly when they create a Container App in an assigned environment.
 
 For this workshop, plan for **no more than 8 participants per environment**. Each participant configures one MCP Toolkit app with `0.5` vCPU, `1 GiB` memory, and at most one replica. If all eight apps are active together, their requested CPU is approximately `8 × 0.5 = 4` vCPU.
 
@@ -290,8 +292,7 @@ Confirm all of the following:
 - `npx @azure/static-web-apps-cli@latest` runs in Cloud Shell PowerShell.
 - The test participant can see and select only the assigned shared Container Apps environment needed for the lab.
 - The test participant can create their uniquely named Container App in their own resource group without modifying the shared environment.
-- The test participant can enable the placeholder Container App's system-assigned identity.
-- The participant can assign `AcrPull` to the Container App identity and then select the shared ACR image.
+- The test participant can select the shared ACR image while creating the Container App.
 - The MCP Container App reaches a healthy revision on port `8080`.
 - The Function App health endpoint returns `healthy`.
 - Static Web Apps proxies `/api/*` to the linked Function App.

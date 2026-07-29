@@ -40,11 +40,11 @@ You do not create a GitHub repository, credentials, secrets, or workflows.
 
 | Term                           | Meaning in this hands-on                                                                                                                    |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Resource Group**       | Logical container for all v2 resources (default name `rg-todomanagementv2-dev`).                                                          |
-| **Function App**         | Azure Functions on a Linux Flex Consumption plan that hosts `src/api/`.                                                                  |
-| **Static Web App (SWA)** | Hosts the Vue 3 SPA built from `src/web/`.                                                                                                |
+| **Resource Group**       | Logical container for all v2 resources (default name`rg-todomanagementv2-dev`).                                                           |
+| **Function App**         | Azure Functions on a Linux Flex Consumption plan that hosts`src/api/`.                                                                   |
+| **Static Web App (SWA)** | Hosts the Vue 3 SPA built from`src/web/`.                                                                                                 |
 | **Cosmos DB serverless** | Stores SQL containers (`todos` / `owners` / `projects` / `conversations`) and the Gremlin graph (`todo-graph-db`/`todo-graph`). |
-| **Microsoft Foundry**    | Provides `gpt-5.4-mini` and `text-embedding-3-small`.                                                                                   |
+| **Microsoft Foundry**    | Provides`gpt-5.4-mini` and `text-embedding-3-small`.                                                                                    |
 | **App registration**     | Entra ID identity for the SPA (sign-in) and, optionally, server-to-Foundry consent.                                                         |
 | **Managed identity**     | The Function App's system-assigned identity used to obtain AAD tokens for Cosmos Gremlin and Azure OpenAI.                                  |
 
@@ -96,10 +96,10 @@ You do not create a GitHub repository, credentials, secrets, or workflows.
 
    | Container         | Partition key |
    | ----------------- | ------------- |
-   | `todos`           | `/owner_id`   |
-   | `owners`          | `/id`         |
-   | `projects`        | `/owner_id`   |
-   | `conversations`   | `/owner_id`   |
+   | `todos`         | `/owner_id` |
+   | `owners`        | `/id`       |
+   | `projects`      | `/owner_id` |
+   | `conversations` | `/owner_id` |
 
 ![Cosmos containers](image/DEPLOY_GUIDE_GUI/03-cosmos-containers.png)
 📖 Reference:[https://learn.microsoft.com/azure/cosmos-db/nosql/quickstart-portal](https://learn.microsoft.com/azure/cosmos-db/nosql/quickstart-portal)
@@ -153,12 +153,16 @@ You do not create a GitHub repository, credentials, secrets, or workflows.
 
 ![Create Foundry resource](image/DEPLOY_GUIDE_GUI/07-create-foundry-resource.png)
 After provisioning:
-4. Open the foundry resource → **Go to Foundry portal**, copy the `Project endpoint` and save it.
-5. **Build** → **Models** → **Deploy a base model** → search `text-embedding-3-small`
-6. Select `text-embedding-3-small`, click **Deploy** → select **Default settings**
+4. Open the Foundry resource → **Access control (IAM)** → **+ Add role assignment**.
+5. Select the **Foundry User** role, then select **Next**.
+6. For **Assign access to**, select **User, group, or service principal** → **+ Select members** → select your signed-in account → **Review + assign**.
+7. Wait a few minutes for the role assignment to propagate.
+8. Open the Foundry resource → **Go to Foundry portal**, copy the `Project endpoint` and save it.
+9. **Build** → **Models** → **Deploy a base model** → search `text-embedding-3-small`
+10. Select `text-embedding-3-small`, click **Deploy** → select **Default settings**
 ![Deploy text-embedding-3-small](image/DEPLOY_GUIDE_GUI/08-deploy-embedding-model.png)
-7. **Build** → **Models** → **Deploy a base model** → search `gpt-5.4-mini`
-8. Select `gpt-5.4-mini`, click **Deploy** → select **Default settings**
+11. **Build** → **Models** → **Deploy a base model** → search `gpt-5.4-mini`
+12. Select `gpt-5.4-mini`, click **Deploy** → select **Default settings**
 ![Deploy gpt-5.4-mini](image/DEPLOY_GUIDE_GUI/09-deploy-gpt-model.png)
 
 ---
@@ -244,16 +248,13 @@ The shared image is only application code. Each learner creates a separate ident
 4. Leave **Redirect URI** empty, then select **Register**.
 5. Copy the **Application (client) ID** and save it as `MCP_CLIENT_ID`.
 6. Open **Expose an API** → **Add** next to **Application ID URI** → accept `api://<MCP_CLIENT_ID>`.
-7. Open **App roles** → **Create app role** and enter:
-
-   | Setting | Value |
-   | --- | --- |
-   | Display name | `MCP Tool Executor` |
+7. Open **App roles** → **Create app role** and enter:| Setting              | Value                                  |
+   | -------------------- | -------------------------------------- |
+   | Display name         | `MCP Tool Executor`                  |
    | Allowed member types | `Both (Users/Groups + Applications)` |
-   | Value | `Mcp.Tool.Executor` |
-   | Description | `Execute Cosmos DB MCP tools` |
-   | Enable this app role | Checked |
-
+   | Value                | `Mcp.Tool.Executor`                  |
+   | Description          | `Execute Cosmos DB MCP tools`        |
+   | Enable this app role | Checked                                |
 8. Select **Apply**.
 
 You add the Container App redirect URIs after its URL exists in Phase 3.
@@ -266,20 +267,20 @@ You add the Container App redirect URIs after its URL exists in Phase 3.
    a. Open **Cloud Shell** in the Azure Portal and select **PowerShell**.
    b. Run this command:
 
-    ```powershell
-    az cosmosdb sql role assignment create `
-       --account-name "<your-cosmos-db-account-name>" `
-       --resource-group "<your-resource-group-name>" `
-       --role-definition-id "00000000-0000-0000-0000-000000000002" `
-       --principal-id "<your-azure-function-uami-id>" `
-       --scope "/"
+   ```powershell
+   az cosmosdb sql role assignment create `
+      --account-name "<your-cosmos-db-account-name>" `
+      --resource-group "<your-resource-group-name>" `
+      --role-definition-id "00000000-0000-0000-0000-000000000002" `
+      --principal-id "<your-azure-function-uami-id>" `
+      --scope "/"
 
-    az cosmosdb sql role assignment create `
-       --account-name "<your-cosmos-gremlin-db-account-name>" `
-       --resource-group "<your-resource-group-name>" `
-       --role-definition-id "00000000-0000-0000-0000-000000000002" `
-       --principal-id "<your-azure-function-uami-id>" `
-       --scope "/"
+   az cosmosdb sql role assignment create `
+      --account-name "<your-cosmos-gremlin-db-account-name>" `
+      --resource-group "<your-resource-group-name>" `
+      --role-definition-id "00000000-0000-0000-0000-000000000002" `
+      --principal-id "<your-azure-function-uami-id>" `
+      --scope "/"
    ```
 
    ![Assign Cosmos DB Built-in Data Contributor role to Function App](image/DEPLOY_GUIDE_GUI/assign-cosmos-role-to-func.png)
@@ -313,7 +314,6 @@ You add the Container App redirect URIs after its URL exists in Phase 3.
       --url "https://graph.microsoft.com/v1.0/servicePrincipals/$spObjectId/appRoleAssignedTo" `
       --headers "Content-Type=application/json" `
       --body $body 2>&1
-
    ```
 
 ---
@@ -324,83 +324,70 @@ You add the Container App redirect URIs after its URL exists in Phase 3.
 
 Before the workshop, the instructor builds the MCP Toolkit image and shares these values:
 
-| Value | Example |
-| --- | --- |
-| Registry | `workshopacr.azurecr.io` |
-| Image | `mcp-toolkit` |
-| Tag | `workshop-20260727` |
+| Value                      | Example                            |
+| -------------------------- | ---------------------------------- |
+| Registry                   | `workshopacr.azurecr.io`         |
+| Image                      | `mcp-toolkit`                    |
+| Tag                        | `workshop-20260727`              |
 | Container Apps environment | `cae-todomanagement-workshop-01` |
-| Environment resource group | `rg-todomanagement-instructor` |
-| Environment region | `japaneast` |
-| Container App name | `mcp-toolkit-p01` |
+| Environment resource group | `rg-todomanagement-instructor`   |
+| Environment region         | `japaneast`                      |
+| Container App name         | `mcp-toolkit-p01`                |
 
 The instructor has already created the shared Container Apps environment and granted you permission to deploy your Container App into it. Do not create another environment, clone the MCP Toolkit repository, or build an image during the hands-on.
 
-#### 3.1.1 Create a placeholder Container App
+#### 3.1.1 Create the Container App with the MCP image
 
 1. Search **Container Apps** → **+ Create**.
 2. On **Basics**:
+
    - Resource group: `rg-todomanagementv2-dev`
    - Container app name: the unique name assigned by the instructor, for example `mcp-toolkit-p01`
    - Region: the instructor-provided environment region
    - Container Apps environment: select the environment assigned by the instructor, for example `cae-todomanagement-workshop-01`
 3. On **Container**:
-   - Use quickstart image: **Checked**
+
+   - Use quickstart image: **Unchecked**
+   - Image source: **Azure Container Registry**
+   - Registry: the instructor-provided registry
+   - Image: the instructor-provided image
+   - Image tag: the instructor-provided tag
    - CPU: `0.5`
    - Memory: `1 GiB`
-4. On **Scale**:
+4. Add these environment variables:
+
+   | Name                            | Value                                  |
+   | ------------------------------- | -------------------------------------- |
+   | `AzureAd__ClientId`           | Your`MCP_CLIENT_ID` from Phase 2     |
+   | `AzureAd__TenantId`           | Your`TENANT_ID` from Phase 2         |
+   | `AzureAd__Audience`           | Your`MCP_CLIENT_ID` from Phase 2     |
+   | `COSMOS_ENDPOINT`             | NoSQL endpoint from Step 1.2           |
+   | `OPENAI_ENDPOINT`             | Foundry project endpoint from Step 1.4 |
+   | `OPENAI_EMBEDDING_DEPLOYMENT` | `text-embedding-3-small`             |
+   | `ASPNETCORE_ENVIRONMENT`      | `Production`                         |
+   | `ASPNETCORE_URLS`             | `http://+:8080`                      |
+5. On **Scale**:
+
    - Minimum replicas: `0`
    - Maximum replicas: `1`
-5. On **Ingress**, leave ingress **Disabled** while the quickstart image is only a placeholder.
-6. Select **Review + create** → **Create**.
+6. On **Ingress**:
+
+   - Ingress: **Enabled**
+   - Ingress traffic: **Accepting traffic from anywhere**
+   - Ingress type: **HTTP**
+   - Target port: `8080`
+7. Select **Review + create** → **Create**, then confirm that the revision becomes **Running**.
 
 If the assigned environment is not selectable, confirm the subscription, environment resource group, and region with the instructor. The instructor must grant your account **Container Apps Contributor** at the assigned environment's scope. Do not create a replacement environment.
 
-#### 3.1.2 Enable identity and deploy the MCP image
-
-The Portal does not expose Container App identity settings on the initial creation page. The placeholder app allows its system-assigned identity to exist before the private image is configured.
-
-1. Open your new Container App → **Settings** → **Identity** → **System assigned**.
-2. Set **Status** to **On** → **Save**.
-3. Open the instructor-provided Container Registry → **Access control (IAM)** → **+ Add role assignment**.
-4. Assign **AcrPull** to the managed identity with your assigned Container App name, for example `mcp-toolkit-p01`.
-5. Wait a few minutes for the role assignment to propagate.
-6. Return to your Container App → **Application** → **Containers** → **Edit and deploy**.
-7. Select the existing container and configure:
-   - Image source: **Azure Container Registry**
-   - Authentication type: **Managed identity**
-   - Managed identity: **System assigned**
-   - Registry: the instructor-provided registry
-   - Image and tag: the instructor-provided values
-   - CPU: `0.5`
-   - Memory: `1 GiB`
-8. Add these environment variables:
-
-   | Name | Value |
-   | --- | --- |
-   | `AzureAd__ClientId` | Your `MCP_CLIENT_ID` from Phase 2 |
-   | `AzureAd__TenantId` | Your `TENANT_ID` from Phase 2 |
-   | `AzureAd__Audience` | Your `MCP_CLIENT_ID` from Phase 2 |
-   | `COSMOS_ENDPOINT` | NoSQL endpoint from Step 1.2 |
-   | `OPENAI_ENDPOINT` | Foundry project endpoint from Step 1.4 |
-   | `OPENAI_EMBEDDING_DEPLOYMENT` | `text-embedding-3-small` |
-   | `ASPNETCORE_ENVIRONMENT` | `Production` |
-   | `ASPNETCORE_URLS` | `http://+:8080` |
-
-9. Select **Save** → **Create** to deploy the new revision.
-10. Open **Settings** → **Ingress** and configure:
-    - Ingress: **Enabled**
-    - Ingress traffic: **Accepting traffic from anywhere**
-    - Ingress type: **HTTP**
-    - Target port: `8080`
-11. Save and confirm that the new revision becomes **Running**.
-
 If the registry or image is not selectable, stop and ask the instructor to confirm your access to the workshop ACR. Do not enable the ACR admin user or use registry passwords.
 
-#### 3.1.3 Grant the Container App runtime permissions
+#### 3.1.2 Grant the Container App runtime permissions
 
-1. Open the Cosmos DB for NoSQL account → **Access control (IAM)** and assign **Cosmos DB Account Reader Role** to the Container App managed identity.
-2. In Cloud Shell PowerShell, grant the Cosmos data-plane reader role:
+1. Open your Container App → **Settings** → **Identity** → **System assigned**.
+2. Set **Status** to **On** → **Save**.
+3. Open the Cosmos DB for NoSQL account → **Access control (IAM)** and assign **Cosmos DB Account Reader Role** to the Container App managed identity.
+4. In Cloud Shell PowerShell, grant the Cosmos data-plane reader role:
 
    ```powershell
    $resourceGroup = "rg-todomanagementv2-dev"
@@ -418,23 +405,20 @@ If the registry or image is not selectable, stop and ask the instructor to confi
      --principal-id $mcpPrincipalId `
      --scope "/"
    ```
+5. Open the Foundry project → **Access control (IAM)** and assign **Foundry User** to the same managed identity.
+6. Restart the Container App revision after role assignments have propagated.
 
-3. Open the Foundry project → **Access control (IAM)** and assign **Foundry User** to the same managed identity.
-4. Restart the Container App revision after role assignments have propagated.
-
-#### 3.1.4 Complete MCP authentication and test
+#### 3.1.3 Complete MCP authentication and test
 
 1. Open your assigned Container App and copy its **Application URL**.
 2. Open **Microsoft Entra ID** → **App registrations** → `todomanagementv2-mcp-api` → **Authentication**.
 3. Add the following **Single-page application (SPA)** redirect URIs, then save:
    - `https://<mcp-app-url>/`
-   - `https://<mcp-app-url>/signin-oidc`
 4. Open **Enterprise applications** → `todomanagementv2-mcp-api` → **Users and groups** → **+ Add user/group**.
 5. Assign your user the **MCP Tool Executor** role.
 6. Open the Container App URL, enter `MCP_CLIENT_ID` and `TENANT_ID`, then sign in.
 7. Select **Test Tool** → `List Databases` → **Invoke Selected Tool**.
-
-The instructor image contains no learner credentials or endpoints. All tenant-specific values are configured in your Container App.
+   ![MCP Toolkit List Databases](image/DEPLOY_GUIDE_GUI/mcp-toolkit-list-databases.png)
 
 📖 Reference: [Azure Cosmos DB MCP Toolkit](https://github.com/AzureCosmosDB/MCPToolKit)
 
@@ -461,9 +445,9 @@ The instructor image contains no learner credentials or endpoints. All tenant-sp
       - **Remote MCP Server endpoint**: `<container-application-url>/mcp`, for example `https://mcp-toolkit-p01.livelyforest-279726ad.japaneast.azurecontainerapps.io/mcp`.
       - **Authentication**: `Microsoft Entra`
       - **Type**: `Project Managed Identity`
-      - **Audience**: Enter your `<entra-app-client-id>` as the audience. This is the value from the output for `az ad app list --display-name "Azure Cosmos DB MCP Toolkit API" --query "[0].appId" -o tsv`.
-        ![Connect tool](image/DEPLOY_GUIDE_GUI/agent-connect-tool-02.png)
-        e. Click **Connect**.
+        - **Audience**: Enter your `MCP_CLIENT_ID` from Phase 2.
+          ![Connect tool](image/DEPLOY_GUIDE_GUI/agent-connect-tool-02.png)
+          e. Click **Connect**.
 4. **Memory** → **Add** → **Create memory store**.
 5. **Save** the agent. Note its **Name** (e.g. `todomanagement-agent`) and **Version** (`3`).
 6. Test the agent.
@@ -480,19 +464,20 @@ The instructor image contains no learner credentials or endpoints. All tenant-sp
 
 In the Function App → **Settings** → **Environment variables** → **+ Add**, add the following variables:
 
-| Name                             | Value                                                                                                     |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `COSMOS_AUTH_MODE`             | `aad`                                                                                                   |
-| `COSMOS_AUTO_CREATE`           | `true`                                                                                                  |
-| `COSMOS_ENDPOINT`              | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.2                                 |
-| `COSMOS_DATABASE`              | `todo-db`                                                                                               |
-| `COSMOS_GREMLIN_ENDPOINT`      | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.3                                 |
-| `COSMOS_GRAPH_DATABASE`        | `todo-graph-db`                                                                                         |
-| `COSMOS_GRAPH_NAME`            | `todo-graph`                                                                                            |
-| `FOUNDRY_AGENT_ENDPOINT`       | `https://<foundry>.services.ai.azure.com/api/projects/proj-default`, the project endpoint from step 1.4 |
-| `FOUNDRY_EMBEDDING_DEPLOYMENT` | `text-embedding-3-small`                                                                                |
-| `FOUNDRY_AGENT_NAME`           | `todomanagement-agent`, the agent name from step 3.2                                                    |
-| `FOUNDRY_AGENT_VERSION`        | e.g.`1`, the version from step 3.2                                                                      |
+| Name                              | Value                                                                                                      |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------  |
+| `AZURE_CLIENT_ID`           　    | `<func-todomanagement-uami-client-id>`, the User Assigned Identity's **Client Id** from step 1.5        　 |
+| `COSMOS_AUTO_CREATE`           　 | `true`                                                                                                  　 |
+| `COSMOS_AUTH_MODE`             　 | `aad`                                                                                                   　 |
+| `COSMOS_ENDPOINT`              　 | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.2                                 　 |
+| `COSMOS_DATABASE`              　 | `todo-db`                                                                                               　 |
+| `COSMOS_GREMLIN_ENDPOINT`      　 | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.3                                 　 |
+| `COSMOS_GRAPH_DATABASE`        　 | `todo-graph-db`                                                                                         　 |
+| `COSMOS_GRAPH_NAME`            　 | `todo-graph`                                                                                            　 |
+| `FOUNDRY_AGENT_ENDPOINT`       　 | `https://<foundry>.services.ai.azure.com/api/projects/proj-default`, the project endpoint from step 1.4 　 |
+| `FOUNDRY_EMBEDDING_DEPLOYMENT` 　 | `text-embedding-3-small`                                                                                　 |
+| `FOUNDRY_AGENT_NAME`           　 | `todomanagement-agent`, the agent name from step 3.2                                                    　 |
+| `FOUNDRY_AGENT_VERSION`        　 | e.g.`1`, the version from step 3.2                                                                      　 |
 
 Click **Apply**.
 
@@ -508,8 +493,6 @@ Click **Apply**.
 2. Clone the public repository provided by the instructor:
 
    ```powershell
-   Set-Location $HOME
-   Remove-Item -Recurse -Force todomanagement_v2 -ErrorAction SilentlyContinue
    git clone https://github.com/Liminghao0922/todomanagement_v2.git
 
    $repoRoot = "$HOME/todomanagement_v2"
@@ -518,7 +501,6 @@ Click **Apply**.
    ```
 
    The expected folders under `src` are `api` and `web`. This is the only Git command used in the participant guide; you do not need to create or sign in to a GitHub account.
-
 3. Confirm the correct Azure subscription:
 
    ```powershell
@@ -543,7 +525,6 @@ Click **Apply**.
    ```
 
    Confirm Python `3.11`, Functions Core Tools `4.x`, and Node.js `20.x`. If a command is unavailable or reports a different major version, stop and ask the instructor; the instructor should verify the workshop Cloud Shell environment before the session.
-
 2. Publish the Python application. Core Tools reads `requirements.txt` and performs the deployment build:
 
    ```powershell
@@ -552,11 +533,11 @@ Click **Apply**.
    Set-Location "$repoRoot\src\api"
    func azure functionapp publish $functionAppName --python
    ```
-
+   ![Function Deployed](image/DEPLOY_GUIDE_GUI/func-deployment-result.png)
 3. Verify the API:
 
    ```powershell
-   Invoke-RestMethod "https://$functionAppName.azurewebsites.net/api/health"
+   Invoke-RestMethod "https://{function-unique-domain}.azurewebsites.net/api/health"
    ```
 
 Expected result: `status` is `healthy`.
@@ -613,7 +594,7 @@ This step makes browser requests to `/api/*` reach your separate Function App.
    - Resource name: your Function App
    - Backend slot: **Production**
 5. Select **Link**.
-
+![Link to function](image/DEPLOY_GUIDE_GUI/swa-link-to-function.png)
 The Static Web App must use the **Standard** plan for this integration.
 
 📖 Reference: [Bring your own functions to Azure Static Web Apps](https://learn.microsoft.com/azure/static-web-apps/functions-bring-your-own)
