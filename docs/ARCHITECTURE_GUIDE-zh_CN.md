@@ -47,13 +47,13 @@ v3 架构采用**云原生、无服务器、基于身份**的设计，集成以�
 │
 │  ┌──────────────────────────────────────────────────┐   │
 │  │ Azure OpenAI Service                            │   │
-│  │ - gpt-4o-mini（聊天 + 提取）                   │   │
+│  │ - gpt-5.4-mini（聊天 + 提取）                  │   │
 │  │ - text-embedding-3-small（向量）               │   │
 │  └──────────────────────────────────────────────────┘   │
 │
 │  ┌──────────────────────────────────────────────────┐   │
 │  │ Azure AI Foundry                                │   │
-│  │ - Web UI Agent（gpt-4o-mini 驱动）             │   │
+│  │ - Web UI Agent（gpt-5.4-mini 驱动）            │   │
 │  │ - 内置: MS Graph + Cosmos 查询工具              │   │
 │  │ - 自定义工具: /api/tools/estimate-hours          │   │
 │  └──────────────────────────────────────────────────┘   │
@@ -118,7 +118,7 @@ Timer: 每 6 小时触发一次
 ```
 用户：在 Foundry UI 中输入查询
   ↓
-Foundry Agent（gpt-4o-mini 驱动）
+Foundry Agent（gpt-5.4-mini 驱动）
   ├─ 内置 MS Graph 工具
   │  └─ 日历 API → 获取事件
   ├─ 内置 Cosmos 工具

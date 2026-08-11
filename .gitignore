@@ -499,3 +499,17 @@ local.settings.json
 __blobstorage__/
 __azurite_db_*.json
 src/api/local.settings.json
+
+# Local function packaging / runtime artifacts
+src/api/.python_packages/
+src/api/.venv311/
+src/api.zip
+
+# Local deployment parameter snapshot
+infra/main.parameters.json
+
+# Local backup folders
+handson-backup-*/
+
+# azd local scaffold manifest (optional to track per team workflow)
+azure.yaml

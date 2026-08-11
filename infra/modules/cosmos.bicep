@@ -1,13 +1,40 @@
 param location string
 param projectName string
 
-var accountName = 'cosmos${toLower(projectName)}${uniqueString(resourceGroup().id)}'
+var sqlAccountName = 'cossql${toLower(projectName)}${uniqueString(resourceGroup().id)}'
+var gremlinAccountName = 'cosgr${toLower(projectName)}${uniqueString(resourceGroup().id)}'
 
-resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
-  name: accountName
+resource cosmosSql 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
+  name: sqlAccountName
   location: location
   kind: 'GlobalDocumentDB'
   properties: {
+    disableLocalAuth: false
+    databaseAccountOfferType: 'Standard'
+    locations: [
+      {
+        locationName: location
+        failoverPriority: 0
+      }
+    ]
+    capabilities: [
+      {
+        name: 'EnableServerless'
+      }
+    ]
+    consistencyPolicy: {
+      defaultConsistencyLevel: 'Session'
+    }
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+resource cosmosGremlin 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
+  name: gremlinAccountName
+  location: location
+  kind: 'GlobalDocumentDB'
+  properties: {
+    disableLocalAuth: false
     databaseAccountOfferType: 'Standard'
     locations: [
       {
@@ -31,7 +58,7 @@ resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
 }
 
 resource sqlDb 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-05-15' = {
-  parent: cosmos
+  parent: cosmosSql
   name: 'todo-db'
   properties: {
     resource: {
@@ -114,7 +141,7 @@ resource conversations 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/conta
 }
 
 resource gremlinDb 'Microsoft.DocumentDB/databaseAccounts/gremlinDatabases@2024-05-15' = {
-  parent: cosmos
+  parent: cosmosGremlin
   name: 'todo-graph-db'
   properties: {
     resource: {
@@ -139,9 +166,9 @@ resource gremlinGraph 'Microsoft.DocumentDB/databaseAccounts/gremlinDatabases/gr
   }
 }
 
-output cosmosAccountName string = cosmos.name
-output cosmosEndpoint string = cosmos.properties.documentEndpoint
-output cosmosGremlinEndpoint string = 'wss://${cosmos.name}.gremlin.cosmos.azure.com:443/'
+output cosmosAccountName string = cosmosSql.name
+output cosmosEndpoint string = cosmosSql.properties.documentEndpoint
+output cosmosGremlinEndpoint string = 'wss://${cosmosGremlin.name}.gremlin.cosmos.azure.com:443/'
 output sqlDatabaseName string = sqlDb.name
 output graphDatabaseName string = gremlinDb.name
 output graphName string = gremlinGraph.name

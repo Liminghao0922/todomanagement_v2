@@ -1,0 +1,19 @@
+{
+  "resourceGroup": "rg-todomanagementv2-instructor-08101114",
+  "functionAppName": "func-todomanagement-todomangementv2-grjro6kpajnxo",
+  "functionAppUrl": "https://func-todomanagement-todomangementv2-grjro6kpajnxo.azurewebsites.net",
+  "staticWebAppName": "swa-todomanagement-grjro6kpajnxo",
+  "staticWebAppUrl": "https://black-mushroom-03aae2f00.7.azurestaticapps.net",
+  "cosmosAccountName": "cossqltodomanagementgrjro6kpajnxo",
+  "cosmosEndpoint": "https://cossqltodomanagementgrjro6kpajnxo.documents.azure.com:443/",
+  "clientId": "ec25fefe-32ec-4e6c-b539-8262394b9def",
+  "tenantId": "f335f8bf-b5a9-466f-806a-d14b03f7ae76",
+  "foundryResourceName": "aifoundry-todomanagement-grjro6kpajnxo",
+  "foundryProjectName": "proj-todomanagement",
+  "foundryProjectEndpoint": "https://aifoundry-todomanagement-grjro6kpajnxo.services.ai.azure.com/api/projects/proj-todomanagement",
+  "cosmosMcpAcrName": "acrtodomanagegrjro6",
+  "cosmosMcpAcrLoginServer": "acrtodomanagegrjro6.azurecr.io",
+  "cosmosMcpImageRepository": "mcp-toolkit",
+  "cosmosMcpImageTag": "latest",
+  "cosmosMcpImage": "acrtodomanagegrjro6.azurecr.io/mcp-toolkit:latest"
+}

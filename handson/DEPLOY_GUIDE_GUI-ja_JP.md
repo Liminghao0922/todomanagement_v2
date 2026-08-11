@@ -21,7 +21,12 @@
 - 環境のリージョン（例: `japaneast`）
 - 一意の Container App 名（例: `mcp-toolkit-p01`）
 
-必要なものは、ブラウザー、インターネット接続、Azure サブスクリプション、および [Azure Cloud Shell](https://learn.microsoft.com/azure/cloud-shell/overview) を使用する権限だけです。Cloud Shell で使用するシェルを尋ねられたら、**PowerShell** を選択してください。
+必要なものは、ブラウザー、インターネット接続、Azure サブスクリプション、および [Azure Cloud Shell](https://learn.microsoft.com/azure/cloud-shell/overview) を使用する権限です。Cloud Shell で使用するシェルを尋ねられたら、**PowerShell** を選択してください。
+
+受講者アカウントには、少なくとも次の権限が必要です。
+
+- 自分が作業するリソース グループに対する **Owner**（少なくとも Contributor 以上）
+- Microsoft Entra ID の **Application Developer**（アプリ登録を作成できる権限）
 
 次の流れで進めます。
 
@@ -88,7 +93,8 @@ GitHub リポジトリ、資格情報、シークレット、ワークフロー�
 8. **Review + create** → **Create** を選択します。
    ![Cosmos DB アカウントの作成](image/DEPLOY_GUIDE_GUI/02-create-cosmos.png)
    プロビジョニング完了後:
-9. アカウントを開き、**Data Explorer** → **New Database** を選択して ID に `todo-db` を入力します。その後、次の 4 つのコンテナーを作成します。
+9. アカウントを開き、**Overview** で **URI**（`https://<cosmos>.documents.azure.com:443/`）をコピーして保存します。フェーズ 3 とフェーズ 4 で使用します。
+10. **Data Explorer** → **New Database** を選択して ID に `todo-db` を入力します。その後、次の 4 つのコンテナーを作成します。
 
    | Container         | Partition key |
    | ----------------- | ------------- |
@@ -149,10 +155,10 @@ GitHub リポジトリ、資格情報、シークレット、ワークフロー�
 6. **Assign access to** で **User, group, or service principal** → **+ Select members** を選択し、サインイン中のアカウントを選択して **Review + assign** を選択します。
 7. ロールの割り当てが反映されるまで数分待ちます。
 8. Foundry リソースを開き、**Go to Foundry portal** を選択します。`Project endpoint` をコピーして保存します。
-9. **Build** → **Models** → **Deploy a base model** を開き、`text-embedding-3-small` を検索します。
+9. **Discover** → **Models** → **Deploy a base model** を開き、`text-embedding-3-small` を検索します。
 10. `text-embedding-3-small` を選択し、**Deploy** → **Default settings** を選択します。
 ![text-embedding-3-small のデプロイ](image/DEPLOY_GUIDE_GUI/08-deploy-embedding-model.png)
-11. **Build** → **Models** → **Deploy a base model** を開き、`gpt-5.4-mini` を検索します。
+11. **Discover** → **Models** → **Deploy a base model** を開き、`gpt-5.4-mini` を検索します。
 12. `gpt-5.4-mini` を選択し、**Deploy** → **Default settings** を選択します。
 ![gpt-5.4-mini のデプロイ](image/DEPLOY_GUIDE_GUI/09-deploy-gpt-model.png)
 
@@ -164,7 +170,8 @@ GitHub リポジトリ、資格情報、シークレット、ワークフロー�
 2. `Flex Consumption` を選択します。
 3. **Basics** で次を設定します。
    - Resource group: `rg-todomanagementv2-dev`
-   - Function App name: `func-todomanagement`。**Secure unique default hostname** を有効にします。
+   - Function App name: `func-todomanagement`
+   - **Secure unique default hostname** が表示される場合は有効にします（リージョンやポータル表示言語によっては表示されない場合があります）。
    - Region: リソース グループと同じ
    - Runtime stack: `Python` 3.11
    - Instance size: `2048 MB`
@@ -217,7 +224,11 @@ GitHub リポジトリ、資格情報、シークレット、ワークフロー�
 5. **Register** を選択します。
 
 作成後:
-6. 任意。ローカルでも実行する場合は、**Authentication** → **+ Add URI** で `http://localhost:5173/` を追加して保存します。
+6. **Authentication** → **+ Add URI** で、次の URI を追加して保存します。
+   - `https://<swa>.azurestaticapps.net`（末尾スラッシュなし）
+   - `https://<swa>.azurestaticapps.net/`（末尾スラッシュあり）
+   - 任意: `http://localhost:5173`（末尾スラッシュなし）
+   - 任意: `http://localhost:5173/`（末尾スラッシュあり）
 7. **Overview** ページから次の値をコピーします。
     - **Application (client) ID** → `CLIENT_ID` として保存
     - **Directory (tenant) ID** → `TENANT_ID` として保存
@@ -254,24 +265,26 @@ Container App の URL が作成されるフェーズ 3 で、リダイレクト 
 ### 2.3 アプリケーション ID へのアクセス権の付与
 
 1. Function App の User Assigned Managed Identity に `Cosmos DB Built-in Data Contributor` ロールを割り当てます。
-   a. Azure Portal で **Cloud Shell** を開き、**PowerShell** を選択します。
-   b. 次のコマンドを実行します。
+   a. まず Azure Portal の GUI で、NoSQL アカウント（および Gremlin アカウント）のデータ プレーン ロール割り当て画面から、`Cosmos DB Built-in Data Contributor` を `func-todomanagement-uami` に割り当ててください。
+   b. ポータルでデータ プレーン ロール割り当てを実行できない場合は、Cloud Shell（PowerShell）で次のコマンドを実行します。
 
    ```powershell
    az cosmosdb sql role assignment create `
       --account-name "<your-cosmos-db-account-name>" `
       --resource-group "<your-resource-group-name>" `
       --role-definition-id "00000000-0000-0000-0000-000000000002" `
-      --principal-id "<your-azure-function-uami-id>" `
+      --principal-id "<your-azure-function-uami-object-id>" `
       --scope "/"
 
    az cosmosdb sql role assignment create `
       --account-name "<your-cosmos-gremlin-db-account-name>" `
       --resource-group "<your-resource-group-name>" `
       --role-definition-id "00000000-0000-0000-0000-000000000002" `
-      --principal-id "<your-azure-function-uami-id>" `
+      --principal-id "<your-azure-function-uami-object-id>" `
       --scope "/"
    ```
+
+   `--principal-id` には **Client ID ではなく Object (principal) ID** を指定します。
 
    ![Function App への Cosmos DB Built-in Data Contributor ロールの割り当て](image/DEPLOY_GUIDE_GUI/assign-cosmos-role-to-func.png)
    📖 参考: [https://learn.microsoft.com/azure/cosmos-db/how-to-setup-rbac](https://learn.microsoft.com/azure/cosmos-db/how-to-setup-rbac)
@@ -280,8 +293,9 @@ Container App の URL が作成されるフェーズ 3 で、リダイレクト 
    - Assign access to: **Managed identity** → **func-todomanagement-uami** を選択します。
      ![Function App への Foundry User ロールの割り当て](image/DEPLOY_GUIDE_GUI/assign-foundry-role-to-func.png)
 3. Foundry プロジェクトのマネージド ID に `MCP Tool Executor` ロールを付与します。
-   a. 同じ Cloud Shell PowerShell セッションを使用します。
-   b. 次のコマンドを実行します。
+   a. GUI で実施する場合は、**Enterprise applications** → `todomanagementv2-mcp-api` → **Users and groups** → **+ Add user/group** を開きます。
+   b. Principal に Foundry プロジェクトのマネージド ID（例: `<foundry-resource-name>/projects/proj-default`）を選択し、Role に `MCP Tool Executor` を選択して割り当てます。
+   c. ポータルでマネージド ID を選択できない場合のみ、同じ Cloud Shell PowerShell セッションで次のコマンドを実行します。
 
    ```powershell
    $ResourceName = "todomanagementv2-mcp-api"
@@ -353,7 +367,7 @@ Container App の URL が作成されるフェーズ 3 で、リダイレクト 
    | `OPENAI_EMBEDDING_DEPLOYMENT` | `text-embedding-3-small` |
    | `ASPNETCORE_ENVIRONMENT`      | `Production` |
    | `ASPNETCORE_URLS`             | `http://+:8080` |
-5. **Scale** で次を設定します。
+5. 作成ウィザードの **Container** タブ下部にある **Scale** セクション（または **Scale** タブ）で次を設定します。
    - Minimum replicas: `0`
    - Maximum replicas: `1`
 6. **Ingress** で次を設定します。
@@ -365,7 +379,7 @@ Container App の URL が作成されるフェーズ 3 で、リダイレクト 
 
 割り当てられた環境を選択できない場合は、サブスクリプション、環境のリソース グループ、およびリージョンを講師に確認してください。講師は、割り当てられた環境のスコープで、受講者のアカウントに **Container Apps Contributor** を付与する必要があります。代わりの環境は作成しないでください。
 
-レジストリまたはイメージを選択できない場合は、作業を中止し、ワークショップ用 ACR へのアクセス権を講師に確認してください。ACR の管理者ユーザーを有効にしたり、レジストリ パスワードを使用したりしないでください。
+レジストリまたはイメージを選択できない場合は、作業を中止し、ワークショップ用 ACR へのアクセス権と ACR の **Admin user** 設定（講師側で有効化済みか）を講師に確認してください。受講者側で ACR 設定は変更しないでください。
 
 #### 3.1.2 Container App の実行時アクセス許可の付与
 
@@ -433,7 +447,7 @@ Container App の URL が作成されるフェーズ 3 で、リダイレクト 
         - **Audience**: フェーズ 2 で取得した `MCP_CLIENT_ID` を入力します。
           ![ツールの接続](image/DEPLOY_GUIDE_GUI/agent-connect-tool-02.png)
           e. **Connect** を選択します。
-4. **Memory** → **Add** → **Create memory store** を選択します。
+4. **Memory** の設定では、**メモリストアの自動作成**（Create memory store）を選択します。
 5. Agent を **Save** します。**Name**（例: `todomanagement-agent`）と **Version**（例: `3`）を控えます。
 6. Agent をテストします。
    1. Playground に次のメッセージを入力します。ツール呼び出しの承認を求められたら、承認してください。

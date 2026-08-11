@@ -1,0 +1,32 @@
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+
+ARG MCP_TOOLKIT_REPOSITORY=https://github.com/AzureCosmosDB/MCPToolKit.git
+ARG MCP_TOOLKIT_REF=main
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+RUN git clone --depth 1 --branch ${MCP_TOOLKIT_REF} ${MCP_TOOLKIT_REPOSITORY} .
+RUN dotnet publish \
+    src/AzureCosmosDB.MCP.Toolkit/AzureCosmosDB.MCP.Toolkit.csproj \
+    --configuration Release \
+    --output /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
+WORKDIR /app
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /app/publish .
+RUN adduser --disabled-password --gecos "" --uid 1000 appuser \
+    && chown -R appuser /app
+USER appuser
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+ENTRYPOINT ["dotnet", "AzureCosmosDB.MCP.Toolkit.dll"]

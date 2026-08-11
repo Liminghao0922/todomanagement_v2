@@ -5,6 +5,9 @@
     "location": {
       "value": "japaneast"
     },
+    "staticWebAppLocation": {
+      "value": "eastasia"
+    },
     "environment": {
       "value": "dev"
     },
@@ -25,6 +28,51 @@
     },
     "graphClientSecret": {
       "value": ""
+    },
+    "deployCosmosMcpToolkit": {
+      "value": true
+    },
+    "deployCosmosMcpAppRegistration": {
+      "value": true
+    },
+    "cosmosMcpImage": {
+      "value": ""
+    },
+    "cosmosMcpImageRepository": {
+      "value": "mcp-toolkit"
+    },
+    "cosmosMcpImageTag": {
+      "value": "latest"
+    },
+    "cosmosMcpClientId": {
+      "value": ""
+    },
+    "cosmosMcpAudience": {
+      "value": ""
+    },
+    "cosmosMcpContainerAppName": {
+      "value": ""
+    },
+    "cosmosMcpContainerAppEnvironmentName": {
+      "value": ""
+    },
+    "cosmosMcpLogAnalyticsWorkspaceName": {
+      "value": ""
+    },
+    "cosmosMcpCpu": {
+      "value": "0.5"
+    },
+    "cosmosMcpMemory": {
+      "value": "1Gi"
+    },
+    "deployCosmosMcpAcr": {
+      "value": true
+    },
+    "cosmosMcpAcrName": {
+      "value": ""
+    },
+    "cosmosMcpAcrSku": {
+      "value": "Basic"
     }
   }
 }

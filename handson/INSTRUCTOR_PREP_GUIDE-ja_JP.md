@@ -14,6 +14,8 @@
 
 Todo アプリケーション自体は、引き続き Azure Functions と Azure Static Web Apps で動作します。共有コンテナー イメージは Cosmos DB MCP Toolkit 専用です。
 
+Container Apps 環境は講師が事前に作成しておくことで、当日の作業時間を大きく短縮できます。
+
 準備時間の目安は 30 分から 45 分です。
 
 ---
@@ -26,6 +28,8 @@ Todo アプリケーション自体は、引き続き Azure Functions と Azure 
 - Azure Cloud Shell へのアクセス
 - この Todo Management v2 リポジトリへのアクセス
 - 参加者アカウントの一覧
+- 参加者アカウント側: 参加者のリソース グループに対する **Owner**（少なくとも Contributor 以上）
+- 参加者アカウント側: Microsoft Entra ID の **Application Developer**
 
 > このガイドでは `az acr build` を使用します。コンテナーのビルドは ACR 内で実行されるため、Cloud Shell に Docker は必要ありません。
 
@@ -61,7 +65,14 @@ az acr create `
   --name $acrName `
   --sku Basic `
   --admin-enabled false
+
+az acr update `
+  --resource-group $resourceGroup `
+  --name $acrName `
+  --admin-enabled true
 ```
+
+参加者が Portal で Container App を作成するときに ACR イメージ参照エラーを回避するため、ワークショップでは ACR 作成後に **Admin user を有効化**します。
 
 ---
 
@@ -140,7 +151,7 @@ Container Apps はマネージド ID を使用してイメージをプルしま�
 
 > `Owner` は、参加者が Container App の作成時に共有 ACR イメージを参照して選択できるようにするための、ワークショップ向けの簡略化された設定です。通常の運用環境では、一般のアプリケーション ユーザーにこのような広範なロールを付与しないでください。
 
-ACR の管理者ユーザーは無効のままにします。
+ワークショップでは、ACR の管理者ユーザーを有効にして運用します。
 
 ---
 
@@ -302,7 +313,7 @@ Container App 名は、共有環境内で一意である必要があります。
 ## 8. ワークショップ前のチェックリスト
 
 - [ ] ワークショップ用 ACR が存在する。
-- [ ] ACR の管理者ユーザーが無効になっている。
+- [ ] ACR の管理者ユーザーが有効になっている。
 - [ ] `mcp-toolkit` イメージのビルドが成功している。
 - [ ] イメージ タグが記録されており、ワークショップ中に変更されない。
 - [ ] 参加者への ACR ロールの割り当てが完了している。
@@ -343,6 +354,7 @@ Test-Path src/AzureCosmosDB.MCP.Toolkit/bin/publish/AzureCosmosDB.MCP.Toolkit.dl
 
 - レジストリ、リポジトリ、タグが正確であること。
 - 参加者にワークショップ用 ACR のロールが割り当てられていること。
+- ACR の管理者ユーザーが有効であること。
 - Container App でシステム割り当てマネージド ID が有効になっていること。
 - Container App の ID に講師用 ACR の `AcrPull` が付与されていること。
 - ACR のパブリック ネットワーク設定で、ワークショップ環境からのアクセスが許可されていること。

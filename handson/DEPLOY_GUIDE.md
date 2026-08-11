@@ -167,7 +167,7 @@ cd infra
 2. Create the resource group if missing.
 3. Submit `main.bicep`, which provisions:
    - Cosmos DB serverless account with SQL DB `todo-db` (containers `todos`, `owners`, `projects`, `conversations`) and Gremlin DB `todo-graph-db` / graph `todo-graph`
-   - Azure OpenAI account with `gpt-4o-mini` and `text-embedding-3-small` deployments
+  - Azure OpenAI account with `gpt-5.4-mini` and `text-embedding-3-small` deployments
    - Azure Functions (Python 3.11, Linux Y1 Consumption) with system-assigned managed identity, plus its plan and storage account
    - Azure Static Web App
    - Azure AI Foundry handoff resource (Cognitive Services AI account)
@@ -215,7 +215,7 @@ The script lists Cosmos, Function App, SWA, and Cognitive Services resources, ca
 
 ## Step 6. Grant the Function App's Managed Identity Data-Plane Access
 
-`infra/modules/functions.bicep` already wires the Cosmos primary key into the Function App, but the **Gremlin** path uses the system-assigned managed identity to obtain an AAD token for `https://cosmos.azure.com/.default`. Grant the identity the Cosmos data-plane role:
+`infra/main.bicep` creates the Function App and its core application settings, but the **Gremlin** path uses the system-assigned managed identity to obtain an AAD token for `https://cosmos.azure.com/.default`. Grant the identity the Cosmos data-plane role:
 
 ```powershell
 $rg     = $resourceGroupName
@@ -274,7 +274,7 @@ The Function App's `/api/chat` endpoint calls the Foundry agent via the `azure.a
 ### 8.2 Create the agent
 
 1. In the project, open **Agents** → **+ New agent**.
-2. Use [`foundry-agent-config.json`](../foundry-agent-config.json) as the reference for **Name**, **Model** (`gpt-4o-mini`), **Description**, and **Instructions**.
+2. Use [`foundry-agent-config.json`](../foundry-agent-config.json) as the reference for **Name**, **Model** (`gpt-5.4-mini`), **Description**, and **Instructions**.
 3. Under **Tools**, enable:
    - Built-in **Microsoft Graph** (Calendar) tool — sign in with a delegated identity that has `Calendars.Read`.
    - Built-in **Azure Cosmos DB** tools (SQL query + Gremlin) — point them at the Cosmos account from Step 5 and at databases `todo-db` / `todo-graph-db`.

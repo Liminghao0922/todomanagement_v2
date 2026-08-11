@@ -14,6 +14,8 @@ Use this guide before the workshop. Participants do not need GitHub accounts and
 
 The Todo application itself remains on Azure Functions and Azure Static Web Apps. The shared container image is only for the Cosmos DB MCP Toolkit.
 
+Pre-creating Container Apps environments by instructors saves significant workshop time on event day.
+
 Estimated preparation time: 30 to 45 minutes.
 
 ---
@@ -26,6 +28,8 @@ Estimated preparation time: 30 to 45 minutes.
 - Azure Cloud Shell access
 - Access to this Todo Management v2 repository
 - A list of participant accounts
+- Participant-side prerequisite: **Owner** on each participant resource group (at minimum, Contributor or higher)
+- Participant-side prerequisite: **Application Developer** in Microsoft Entra ID
 
 > This guide uses `az acr build`. The container build runs in ACR, so Docker is not required in Cloud Shell.
 
@@ -61,7 +65,14 @@ az acr create `
   --name $acrName `
   --sku Basic `
   --admin-enabled false
+
+az acr update `
+  --resource-group $resourceGroup `
+  --name $acrName `
+  --admin-enabled true
 ```
+
+To avoid image-access errors during participant Container App creation in Portal, enable ACR **Admin user** after creation for this workshop setup.
 
 ---
 
@@ -140,7 +151,7 @@ For each participant:
 
 > `Owner` is a workshop shortcut that lets participants browse and select the shared ACR image during Container App creation. Do not use this broad role for normal application users in production.
 
-Keep the ACR admin user disabled.
+For this workshop setup, keep the ACR admin user enabled.
 
 ---
 
@@ -302,7 +313,7 @@ Confirm all of the following:
 ## 8. Pre-workshop checklist
 
 - [ ] Workshop ACR exists.
-- [ ] ACR admin user is disabled.
+- [ ] ACR admin user is enabled.
 - [ ] `mcp-toolkit` image build succeeded.
 - [ ] The image tag is recorded and will not change during the workshop.
 - [ ] Participant ACR role assignments are complete.
@@ -343,6 +354,7 @@ Confirm:
 
 - The registry, repository, and tag are exact.
 - The participant has the workshop ACR role assignment.
+- ACR admin user is enabled.
 - The Container App has system-assigned managed identity enabled.
 - The Container App identity has `AcrPull` on the instructor ACR.
 - The ACR public network setting permits access from the workshop environment.

@@ -1,9 +1,105 @@
 import os
+import json
+import time
+import urllib.parse
+import urllib.request
+import logging
 from functools import lru_cache
 
 from azure.cosmos import CosmosClient, PartitionKey
 from azure.cosmos import exceptions as cosmos_exceptions
-from azure.identity import DefaultAzureCredential
+from azure.core.credentials import AccessToken
+
+
+logger = logging.getLogger(__name__)
+
+
+class _ImdsManagedIdentityCredential:
+    """Lightweight token credential using IMDS to avoid azure.identity runtime issues."""
+
+    def __init__(self, client_id: str | None = None) -> None:
+        self._client_id = client_id or ""
+
+    def get_token(self, *scopes: str, **kwargs) -> AccessToken:
+        if not scopes:
+            raise RuntimeError("At least one scope is required for token acquisition")
+
+        resource = scopes[0]
+        if resource.endswith("/.default"):
+            resource = resource[: -len("/.default")]
+
+        payload = self._request_token_payload(resource)
+
+        token = payload.get("access_token", "")
+        if not token:
+            raise RuntimeError("IMDS token response did not include access_token")
+
+        expires_on_raw = payload.get("expires_on")
+        try:
+            expires_on = int(expires_on_raw)
+        except Exception:
+            expires_on = int(time.time()) + 300
+
+        return AccessToken(token, expires_on)
+
+    def _request_token_payload(self, resource: str) -> dict:
+        identity_endpoint = os.getenv("IDENTITY_ENDPOINT", "")
+        identity_header = os.getenv("IDENTITY_HEADER", "")
+        if identity_endpoint and identity_header:
+            query = {
+                "api-version": "2019-08-01",
+                "resource": resource,
+            }
+            if self._client_id:
+                query["client_id"] = self._client_id
+            url = identity_endpoint + ("&" if "?" in identity_endpoint else "?") + urllib.parse.urlencode(query)
+            req = urllib.request.Request(url, headers={"X-IDENTITY-HEADER": identity_header, "Metadata": "true"})
+            try:
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    return json.loads(resp.read().decode("utf-8"))
+            except Exception as exc:
+                raise RuntimeError(f"Failed to acquire managed identity token from IDENTITY_ENDPOINT: {exc}")
+
+        msi_endpoint = os.getenv("MSI_ENDPOINT", "")
+        msi_secret = os.getenv("MSI_SECRET", "")
+        if msi_endpoint and msi_secret:
+            query = {
+                "api-version": "2017-09-01",
+                "resource": resource,
+            }
+            if self._client_id:
+                query["clientid"] = self._client_id
+            url = msi_endpoint + ("&" if "?" in msi_endpoint else "?") + urllib.parse.urlencode(query)
+            req = urllib.request.Request(url, headers={"Secret": msi_secret})
+            try:
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    return json.loads(resp.read().decode("utf-8"))
+            except Exception as exc:
+                raise RuntimeError(f"Failed to acquire managed identity token from MSI_ENDPOINT: {exc}")
+
+        query = {
+            "api-version": "2018-02-01",
+            "resource": resource,
+        }
+        if self._client_id:
+            query["client_id"] = self._client_id
+        url = "http://169.254.169.254/metadata/identity/oauth2/token?" + urllib.parse.urlencode(query)
+        req = urllib.request.Request(url, headers={"Metadata": "true"})
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception as exc:
+            raise RuntimeError(f"Failed to acquire managed identity token from IMDS: {exc}")
+
+
+def _aad_credential():
+    try:
+        from azure.identity import DefaultAzureCredential
+
+        return DefaultAzureCredential()
+    except Exception as exc:
+        logger.warning("DefaultAzureCredential unavailable (%s); falling back to IMDS credential", exc)
+        return _ImdsManagedIdentityCredential(client_id=os.getenv("AZURE_CLIENT_ID"))
 
 
 @lru_cache(maxsize=1)
@@ -15,7 +111,7 @@ def _client() -> CosmosClient:
         raise RuntimeError("COSMOS_ENDPOINT is required")
 
     if auth_mode == "aad":
-        return CosmosClient(endpoint, credential=DefaultAzureCredential())
+        return CosmosClient(endpoint, credential=_aad_credential())
 
     if auth_mode == "key":
         if not key:
@@ -24,7 +120,7 @@ def _client() -> CosmosClient:
 
     if key:
         return CosmosClient(endpoint, credential=key)
-    return CosmosClient(endpoint, credential=DefaultAzureCredential())
+    return CosmosClient(endpoint, credential=_aad_credential())
 
 
 @lru_cache(maxsize=1)

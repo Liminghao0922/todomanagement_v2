@@ -21,7 +21,12 @@ Get these eight items from the instructor:
 - Environment region, for example `japaneast`
 - Your unique Container App name, for example `mcp-toolkit-p01`
 
-You only need a browser, internet access, an Azure subscription, and permission to use [Azure Cloud Shell](https://learn.microsoft.com/azure/cloud-shell/overview). Select **PowerShell** when Cloud Shell asks which shell to use.
+You need a browser, internet access, an Azure subscription, and permission to use [Azure Cloud Shell](https://learn.microsoft.com/azure/cloud-shell/overview). Select **PowerShell** when Cloud Shell asks which shell to use.
+
+Participant accounts should have at least the following permissions:
+
+- **Owner** on their working resource group (at minimum, Contributor or higher)
+- **Application Developer** in Microsoft Entra ID (permission to create app registrations)
 
 You will follow one route:
 
@@ -92,7 +97,8 @@ You do not create a GitHub repository, credentials, secrets, or workflows.
 8. **Review + create** → **Create**.
    ![Create Cosmos DB Account](image/DEPLOY_GUIDE_GUI/02-create-cosmos.png)
    After provisioning:
-9. Open the account → **Data Explorer** → **New Database** → ID `todo-db`. Then create four containers:
+9. Open the account, copy **URI** from **Overview** (`https://<cosmos>.documents.azure.com:443/`), and save it. You will use it in Phase 3 and Phase 4.
+10. Open **Data Explorer** → **New Database** → ID `todo-db`. Then create four containers:
 
    | Container         | Partition key |
    | ----------------- | ------------- |
@@ -158,10 +164,10 @@ After provisioning:
 6. For **Assign access to**, select **User, group, or service principal** → **+ Select members** → select your signed-in account → **Review + assign**.
 7. Wait a few minutes for the role assignment to propagate.
 8. Open the Foundry resource → **Go to Foundry portal**, copy the `Project endpoint` and save it.
-9. **Build** → **Models** → **Deploy a base model** → search `text-embedding-3-small`
+9. **Discover** → **Models** → **Deploy a base model** → search `text-embedding-3-small`
 10. Select `text-embedding-3-small`, click **Deploy** → select **Default settings**
 ![Deploy text-embedding-3-small](image/DEPLOY_GUIDE_GUI/08-deploy-embedding-model.png)
-11. **Build** → **Models** → **Deploy a base model** → search `gpt-5.4-mini`
+11. **Discover** → **Models** → **Deploy a base model** → search `gpt-5.4-mini`
 12. Select `gpt-5.4-mini`, click **Deploy** → select **Default settings**
 ![Deploy gpt-5.4-mini](image/DEPLOY_GUIDE_GUI/09-deploy-gpt-model.png)
 
@@ -173,7 +179,8 @@ After provisioning:
 2. Select `Flex Consumption`
 3. **Basics**:
    - Resource group: `rg-todomanagementv2-dev`
-   - Function App name: `func-todomanagement`, and enable **Secure unique default hostname**.
+   - Function App name: `func-todomanagement`
+   - If **Secure unique default hostname** is shown, enable it (this option may not appear depending on region or portal language).
    - Region: same as RG
    - Runtime stack: `Python` 3.11
    - Instance size: `2048 MB`
@@ -227,7 +234,11 @@ After provisioning:
 5. **Register**.
 
 After creation:
-6. Optional. If you want to run this locally, add the redirect URI in **Authentication** → **+ Add URI** → `http://localhost:5173/`, then save.
+6. In **Authentication** → **+ Add URI**, add the following URIs and save:
+   - `https://<swa>.azurestaticapps.net` (without trailing slash)
+   - `https://<swa>.azurestaticapps.net/` (with trailing slash)
+   - Optional: `http://localhost:5173` (without trailing slash)
+   - Optional: `http://localhost:5173/` (with trailing slash)
 7. From the **Overview** page, copy:
     - **Application (client) ID** → save as `CLIENT_ID`
     - **Directory (tenant) ID** → save as `TENANT_ID`
@@ -263,25 +274,27 @@ You add the Container App redirect URIs after its URL exists in Phase 3.
 
 ### 2.3 Grant application identities access
 
-1. Assign `Cosmos DB Built-in Data Contributor` role to Function App's User Assigned Managed Identity.
-   a. Open **Cloud Shell** in the Azure Portal and select **PowerShell**.
-   b. Run this command:
+1. Assign `Cosmos DB Built-in Data Contributor` to the Function App user-assigned managed identity.
+   a. First, use the Azure Portal GUI data-plane role assignment in the NoSQL account (and Gremlin account) to assign `Cosmos DB Built-in Data Contributor` to `func-todomanagement-uami`.
+   b. If data-plane role assignment is not available in the portal for your tenant/role, use Cloud Shell (PowerShell) with the fallback commands below.
 
    ```powershell
    az cosmosdb sql role assignment create `
       --account-name "<your-cosmos-db-account-name>" `
       --resource-group "<your-resource-group-name>" `
       --role-definition-id "00000000-0000-0000-0000-000000000002" `
-      --principal-id "<your-azure-function-uami-id>" `
+      --principal-id "<your-azure-function-uami-object-id>" `
       --scope "/"
 
    az cosmosdb sql role assignment create `
       --account-name "<your-cosmos-gremlin-db-account-name>" `
       --resource-group "<your-resource-group-name>" `
       --role-definition-id "00000000-0000-0000-0000-000000000002" `
-      --principal-id "<your-azure-function-uami-id>" `
+      --principal-id "<your-azure-function-uami-object-id>" `
       --scope "/"
    ```
+
+   For `--principal-id`, use the **Object (principal) ID**, not the Client ID.
 
    ![Assign Cosmos DB Built-in Data Contributor role to Function App](image/DEPLOY_GUIDE_GUI/assign-cosmos-role-to-func.png)
    📖 Reference: [https://learn.microsoft.com/azure/cosmos-db/how-to-setup-rbac](https://learn.microsoft.com/azure/cosmos-db/how-to-setup-rbac)
@@ -291,8 +304,9 @@ You add the Container App redirect URIs after its URL exists in Phase 3.
    - Assign access to: **Managed identity** → select the **func-todomanagement-uami**.
      ![Assign Foundry User role to Function App](image/DEPLOY_GUIDE_GUI/assign-foundry-role-to-func.png)
 3. Grant the `MCP Tool Executor` role to the Foundry project's managed identity.
-   a. Use the same Cloud Shell PowerShell session.
-   b. Run this command:
+   a. GUI-first path: open **Enterprise applications** → `todomanagementv2-mcp-api` → **Users and groups** → **+ Add user/group**.
+   b. Select the Foundry project managed identity (for example `<foundry-resource-name>/projects/proj-default`) as the principal, select role `MCP Tool Executor`, and assign.
+   c. If the portal cannot select the managed identity principal, use the same Cloud Shell PowerShell session and run the fallback command below.
 
    ```powershell
    $ResourceName = "todomanagementv2-mcp-api"
@@ -366,7 +380,7 @@ The instructor has already created the shared Container Apps environment and gra
    | `OPENAI_EMBEDDING_DEPLOYMENT` | `text-embedding-3-small`             |
    | `ASPNETCORE_ENVIRONMENT`      | `Production`                         |
    | `ASPNETCORE_URLS`             | `http://+:8080`                      |
-5. On **Scale**:
+5. In the **Scale** section at the bottom of the **Container** tab (or in a dedicated **Scale** tab, depending on portal layout):
 
    - Minimum replicas: `0`
    - Maximum replicas: `1`
@@ -380,7 +394,7 @@ The instructor has already created the shared Container Apps environment and gra
 
 If the assigned environment is not selectable, confirm the subscription, environment resource group, and region with the instructor. The instructor must grant your account **Container Apps Contributor** at the assigned environment's scope. Do not create a replacement environment.
 
-If the registry or image is not selectable, stop and ask the instructor to confirm your access to the workshop ACR. Do not enable the ACR admin user or use registry passwords.
+If the registry or image is not selectable, stop and ask the instructor to confirm your workshop ACR access and whether ACR **Admin user** is enabled on the instructor side. Do not change ACR settings from the participant side.
 
 #### 3.1.2 Grant the Container App runtime permissions
 
@@ -448,7 +462,7 @@ If the registry or image is not selectable, stop and ask the instructor to confi
         - **Audience**: Enter your `MCP_CLIENT_ID` from Phase 2.
           ![Connect tool](image/DEPLOY_GUIDE_GUI/agent-connect-tool-02.png)
           e. Click **Connect**.
-4. **Memory** → **Add** → **Create memory store**.
+4. In **Memory**, choose **auto-create memory store** (Create memory store).
 5. **Save** the agent. Note its **Name** (e.g. `todomanagement-agent`) and **Version** (`3`).
 6. Test the agent.
    1. Enter the following message in the playground. Approve the tool-calling request when asked.

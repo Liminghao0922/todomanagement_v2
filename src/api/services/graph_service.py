@@ -4,7 +4,6 @@ from typing import Any
 
 from gremlin_python.driver import client
 from gremlin_python.driver.serializer import GraphSONSerializersV2d0
-from azure.identity import DefaultAzureCredential
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +100,8 @@ def _get_client() -> client.Client | None:
 
     try:
         # Get Azure AD token for Cosmos DB
+        from azure.identity import DefaultAzureCredential
+
         credential = DefaultAzureCredential()
         token = credential.get_token("https://cosmos.azure.com/.default")
         

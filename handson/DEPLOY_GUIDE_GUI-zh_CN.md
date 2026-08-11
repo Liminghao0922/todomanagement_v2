@@ -21,7 +21,12 @@
 - 环境区域，例如 `japaneast`
 - 你的唯一 Container App 名称，例如 `mcp-toolkit-p01`
 
-你只需要浏览器、Internet 访问、Azure 订阅，以及使用 [Azure Cloud Shell](https://learn.microsoft.com/azure/cloud-shell/overview) 的权限。当 Cloud Shell 询问要使用的 shell 时，请选择 **PowerShell**。
+你需要浏览器、Internet 访问、Azure 订阅，以及使用 [Azure Cloud Shell](https://learn.microsoft.com/azure/cloud-shell/overview) 的权限。当 Cloud Shell 询问要使用的 shell 时，请选择 **PowerShell**。
+
+参与者账户至少应具备以下权限：
+
+- 对本人实验资源组拥有 **Owner**（至少 Contributor 或更高）
+- 在 Microsoft Entra ID 中拥有 **Application Developer**（可创建应用注册）
 
 你将按照以下路线操作：
 
@@ -92,7 +97,8 @@
 8. 选择 **Review + create** → **Create**。
    ![创建 Cosmos DB 账户](image/DEPLOY_GUIDE_GUI/02-create-cosmos.png)
    预配完成后：
-9. 打开该账户 → **Data Explorer** → **New Database** → ID 填写 `todo-db`。然后创建以下四个容器：
+9. 打开该账户，在 **Overview** 页面复制并保存 **URI**（`https://<cosmos>.documents.azure.com:443/`），供阶段 3 和阶段 4 使用。
+10. 打开 **Data Explorer** → **New Database** → ID 填写 `todo-db`。然后创建以下四个容器：
 
    | 容器 | 分区键 |
    | ----------------- | ------------- |
@@ -158,10 +164,10 @@
 6. 在 **Assign access to** 中选择 **User, group, or service principal** → **+ Select members** → 选择你当前登录的账户 → **Review + assign**。
 7. 等待几分钟，使角色分配生效。
 8. 打开 Foundry 资源 → **Go to Foundry portal**，复制 `Project endpoint` 并保存。
-9. **Build** → **Models** → **Deploy a base model** → 搜索 `text-embedding-3-small`
+9. **Discover** → **Models** → **Deploy a base model** → 搜索 `text-embedding-3-small`
 10. 选择 `text-embedding-3-small`，单击 **Deploy** → 选择 **Default settings**
 ![部署 text-embedding-3-small](image/DEPLOY_GUIDE_GUI/08-deploy-embedding-model.png)
-11. **Build** → **Models** → **Deploy a base model** → 搜索 `gpt-5.4-mini`
+11. **Discover** → **Models** → **Deploy a base model** → 搜索 `gpt-5.4-mini`
 12. 选择 `gpt-5.4-mini`，单击 **Deploy** → 选择 **Default settings**
 ![部署 gpt-5.4-mini](image/DEPLOY_GUIDE_GUI/09-deploy-gpt-model.png)
 
@@ -173,7 +179,8 @@
 2. 选择 `Flex Consumption`。
 3. **Basics**：
    - Resource group：`rg-todomanagementv2-dev`
-   - Function App name：`func-todomanagement`，并启用 **Secure unique default hostname**。
+   - Function App name：`func-todomanagement`
+   - 如果界面显示 **Secure unique default hostname**，请启用（该选项可能因区域或门户语言不同而不显示）。
    - Region：与资源组相同
    - Runtime stack：`Python` 3.11
    - Instance size：`2048 MB`
@@ -226,7 +233,11 @@
 5. 选择 **Register**。
 
 创建完成后：
-6. 可选。如果希望在本地运行，请在 **Authentication** → **+ Add URI** 中添加重定向 URI `http://localhost:5173/`，然后保存。
+6. 在 **Authentication** → **+ Add URI** 中添加以下 URI 并保存：
+   - `https://<swa>.azurestaticapps.net`（无末尾斜杠）
+   - `https://<swa>.azurestaticapps.net/`（有末尾斜杠）
+   - 可选：`http://localhost:5173`（无末尾斜杠）
+   - 可选：`http://localhost:5173/`（有末尾斜杠）
 7. 从 **Overview** 页面复制：
     - **Application (client) ID** → 保存为 `CLIENT_ID`
     - **Directory (tenant) ID** → 保存为 `TENANT_ID`
@@ -266,24 +277,26 @@
 ### 2.3 为应用程序标识授予访问权限
 
 1. 将 `Cosmos DB Built-in Data Contributor` 角色分配给 Function App 的用户分配托管标识。
-   a. 在 Azure 门户中打开 **Cloud Shell** 并选择 **PowerShell**。
-   b. 运行以下命令：
+   a. 优先使用 Azure 门户 GUI：在 NoSQL 账户（以及 Gremlin 账户）的数据平面角色分配中，将 `Cosmos DB Built-in Data Contributor` 分配给 `func-todomanagement-uami`。
+   b. 若当前租户/权限下门户无法完成数据平面角色分配，再使用 Cloud Shell（PowerShell）执行以下回退命令。
 
    ```powershell
    az cosmosdb sql role assignment create `
       --account-name "<your-cosmos-db-account-name>" `
       --resource-group "<your-resource-group-name>" `
       --role-definition-id "00000000-0000-0000-0000-000000000002" `
-      --principal-id "<your-azure-function-uami-id>" `
+      --principal-id "<your-azure-function-uami-object-id>" `
       --scope "/"
 
    az cosmosdb sql role assignment create `
       --account-name "<your-cosmos-gremlin-db-account-name>" `
       --resource-group "<your-resource-group-name>" `
       --role-definition-id "00000000-0000-0000-0000-000000000002" `
-      --principal-id "<your-azure-function-uami-id>" `
+      --principal-id "<your-azure-function-uami-object-id>" `
       --scope "/"
    ```
+
+   `--principal-id` 必须填写 **Object (principal) ID**，不是 Client ID。
 
    ![将 Cosmos DB Built-in Data Contributor 角色分配给 Function App](image/DEPLOY_GUIDE_GUI/assign-cosmos-role-to-func.png)
    📖 参考：[https://learn.microsoft.com/azure/cosmos-db/how-to-setup-rbac](https://learn.microsoft.com/azure/cosmos-db/how-to-setup-rbac)
@@ -293,8 +306,9 @@
    - Assign access to：**Managed identity** → 选择 **func-todomanagement-uami**。
      ![将 Foundry User 角色分配给 Function App](image/DEPLOY_GUIDE_GUI/assign-foundry-role-to-func.png)
 3. 将 `MCP Tool Executor` 角色授予 Foundry 项目的托管标识。
-   a. 使用同一个 Cloud Shell PowerShell 会话。
-   b. 运行以下命令：
+   a. GUI 优先路径：打开 **Enterprise applications** → `todomanagementv2-mcp-api` → **Users and groups** → **+ Add user/group**。
+   b. Principal 选择 Foundry 项目托管标识（例如 `<foundry-resource-name>/projects/proj-default`），Role 选择 `MCP Tool Executor` 并完成分配。
+   c. 若门户无法选择该托管标识主体，再使用同一个 Cloud Shell PowerShell 会话执行下面的回退命令。
 
    ```powershell
    $ResourceName = "todomanagementv2-mcp-api"
@@ -369,7 +383,7 @@
    | `ASPNETCORE_ENVIRONMENT` | `Production` |
    | `ASPNETCORE_URLS` | `http://+:8080` |
 
-5. 在 **Scale** 中：
+5. 在 **Container** 页签底部的 **Scale** 区域（或门户中的独立 **Scale** 页签）中：
 
    - Minimum replicas：`0`
    - Maximum replicas：`1`
@@ -383,7 +397,7 @@
 
 如果无法选择分配的环境，请与讲师确认订阅、环境资源组和区域。讲师必须在所分配环境的作用域内向你的账户授予 **Container Apps Contributor**。请勿创建替代环境。
 
-如果无法选择注册表或映像，请停止操作并要求讲师确认你对工作坊 ACR 的访问权限。请勿启用 ACR 管理员用户或使用注册表密码。
+如果无法选择注册表或映像，请停止操作并要求讲师确认你对工作坊 ACR 的访问权限，以及讲师侧是否已启用 ACR **Admin user**。参与者侧不要修改 ACR 设置。
 
 #### 3.1.2 授予 Container App 运行时权限
 
@@ -452,7 +466,7 @@
         - **Audience**：输入阶段 2 中的 `MCP_CLIENT_ID`。
           ![连接工具](image/DEPLOY_GUIDE_GUI/agent-connect-tool-02.png)
           e. 单击 **Connect**。
-4. **Memory** → **Add** → **Create memory store**。
+4. 在 **Memory** 中选择 **自动创建 memory store**（Create memory store）。
 5. **Save** Agent。记下其 **Name**（例如 `todomanagement-agent`）和 **Version**（`3`）。
 6. 测试 Agent。
    1. 在 Playground 中输入以下消息。出现提示时批准工具调用请求。

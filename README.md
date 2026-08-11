@@ -13,7 +13,7 @@ The infrastructure is designed to be **serverless, identity-based, and AI-ready*
 ## Architecture At A Glance
 - **Backend**: Azure Functions (Python 3.11, anonymous HTTP auth, system-assigned managed identity) exposing Todo / Project / Conversation / Tool / Chat / Graph endpoints
 - **Data**: Azure Cosmos DB serverless account with a SQL database (`todo-db`: `todos`, `owners`, `projects`, `conversations`) and a Gremlin database (`todo-graph-db` / `todo-graph`) holding `BLOCKED_BY`, `PRECEDES`, `SUBTASK_OF`, `SIMILAR_TO` edges
-- **AI**: Azure OpenAI (`gpt-4o-mini` for chat, `text-embedding-3-small` for vector search) and an Azure AI Foundry agent invoked from the Function App via the `azure.ai.projects` SDK
+- **AI**: Azure OpenAI (`gpt-5.4-mini` for chat, `text-embedding-3-small` for vector search) and an Azure AI Foundry agent invoked from the Function App via the `azure.ai.projects` SDK
 - **Frontend**: Vue 3 + Vite SPA on Azure Static Web Apps (Todos, Todo Edit, Projects, and a Cytoscape-based Project Graph view), with MSAL sign-in
 - **Identity**: Microsoft Entra ID app registration for the SPA (`User.Read`, `Calendars.Read`); managed identity on the Function App used for Gremlin (Cosmos data plane), Foundry, and OpenAI when AAD mode is enabled
 - **Reference**: `docs/ARCHITECTURE_GUIDE.md`
@@ -73,10 +73,43 @@ The user identity is resolved from `x-user-id` header / `userId` query / JSON bo
 ## Deployment
 The IaC flow lives under `infra/`:
 
-1. Run `infra/deploy.ps1` — provisions Cosmos (SQL + Gremlin, serverless), Azure OpenAI (with `gpt-4o-mini` and `text-embedding-3-small` deployments), the Function App + plan + storage, the Static Web App, the Foundry-handoff resource, and the Microsoft Graph app registration.
-2. Record the outputs (Function URL, SWA URL, Cosmos endpoints, Entra App ID / tenant, Foundry resource).
-3. Configure the Foundry agent in the Azure AI Foundry portal using `foundry-agent-config.json` as a reference (built-in Microsoft Graph + Cosmos tools, custom `estimate_hours` REST tool pointing at `<function-app>/api/tools/estimate-hours`).
-4. Deploy Function code (`func azure functionapp publish ...`) and the Web build (SWA CLI or GitHub Actions).
+1. Run `azd provision` to create or update Cosmos, Foundry and model deployments, the Function App infrastructure, Static Web App, ACR, Container Apps, Entra applications, identities, RBAC, and Foundry connections.
+2. Run `azd deploy` to build and activate the Cosmos MCP image, create or update the Foundry Agent, publish the Function code and Static Web App, link the API backend, and run health checks.
+3. Run `azd up` when both phases should execute in order.
+4. Optional: customize Cosmos MCP Toolkit settings before `azd provision`:
+
+```powershell
+azd env set COSMOS_MCP_CLIENT_ID "<mcp-app-client-id>"   # optional; leave unset to auto-create the Entra app
+
+# Optional: create ACR in the same Bicep deployment (enabled by default)
+azd env set COSMOS_MCP_ACR_NAME ""
+azd env set COSMOS_MCP_ACR_SKU "Basic"
+
+# Option A: provide full image directly
+azd env set COSMOS_MCP_IMAGE "<acr>.azurecr.io/mcp-toolkit:<tag>"
+
+# Option B: let Bicep compose image from ACR + repo/tag (COSMOS_MCP_IMAGE can stay empty)
+azd env set COSMOS_MCP_IMAGE_REPOSITORY "mcp-toolkit"
+azd env set COSMOS_MCP_IMAGE_TAG "latest"
+```
+
+The deploy phase builds and pushes the MCP Toolkit image through ACR remote build; local Docker isn't required:
+
+```powershell
+azd provision
+azd deploy
+
+# Optional overrides
+azd env set COSMOS_MCP_AUDIENCE ""
+azd env set COSMOS_MCP_APP_NAME ""
+azd env set COSMOS_MCP_ENV_NAME ""
+azd env set COSMOS_MCP_LAW_NAME ""
+azd env set COSMOS_MCP_CPU "0.5"
+azd env set COSMOS_MCP_MEMORY "1Gi"
+```
+
+When required values are present (`COSMOS_MCP_CLIENT_ID` and a resolved image), `infra/main.bicep` deploys the managed environment, Container App, and Cosmos RBAC bindings. If `COSMOS_MCP_CLIENT_ID` is left empty, the template registers a dedicated Entra application (with the `Mcp.Tool.Executor` app role) and uses its client id. If `deployCosmosMcpAcr` is enabled (default), it also creates ACR and grants AcrPull to the Container App managed identity. If required values are missing, MCP deployment is skipped safely.
+
 5. Validate Todo CRUD, vector search, Project graph, and the Foundry chat round-trip.
 
 See `handson/DEPLOY_GUIDE.md` for the full English walkthrough.

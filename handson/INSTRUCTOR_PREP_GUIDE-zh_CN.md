@@ -14,6 +14,8 @@
 
 Todo 应用本身仍托管在 Azure Functions 和 Azure Static Web Apps 上。共享容器映像仅用于 Cosmos DB MCP Toolkit。
 
+讲师提前创建好 Container Apps 环境，可以显著节省活动当天的时间。
+
 预计准备时间：30 到 45 分钟。
 
 ---
@@ -26,6 +28,8 @@ Todo 应用本身仍托管在 Azure Functions 和 Azure Static Web Apps 上。�
 - Azure Cloud Shell 访问权限
 - 对此 Todo Management v2 存储库的访问权限
 - 参与者帐户列表
+- 参与者侧前提：对各自实验资源组拥有 **Owner**（至少 Contributor 或更高）
+- 参与者侧前提：在 Microsoft Entra ID 中拥有 **Application Developer**
 
 > 本指南使用 `az acr build`。容器生成在 ACR 中运行，因此 Cloud Shell 中不需要 Docker。
 
@@ -61,7 +65,14 @@ az acr create `
   --name $acrName `
   --sku Basic `
   --admin-enabled false
+
+az acr update `
+  --resource-group $resourceGroup `
+  --name $acrName `
+  --admin-enabled true
 ```
+
+为避免参与者在 Portal 创建 Container App 时出现映像访问错误，本工作坊场景下请在创建后启用 ACR **Admin user**。
 
 ---
 
@@ -140,7 +151,7 @@ Container Apps 使用托管标识拉取映像。
 
 > `Owner` 是研讨会中的便捷做法，使参与者可在创建 Container App 时浏览并选择共享 ACR 映像。请勿在生产环境中为普通应用用户使用这一权限范围过大的角色。
 
-保持 ACR 管理员用户处于禁用状态。
+在本工作坊场景下，保持 ACR 管理员用户处于启用状态。
 
 ---
 
@@ -302,7 +313,7 @@ Container App 名称在共享环境中必须唯一。不要为所有参与者分
 ## 8. 研讨会前检查清单
 
 - [ ] 研讨会 ACR 已存在。
-- [ ] ACR 管理员用户已禁用。
+- [ ] ACR 管理员用户已启用。
 - [ ] `mcp-toolkit` 映像生成成功。
 - [ ] 已记录映像标记，且研讨会期间不会更改。
 - [ ] 已完成参与者 ACR 角色分配。
@@ -343,6 +354,7 @@ Test-Path src/AzureCosmosDB.MCP.Toolkit/bin/publish/AzureCosmosDB.MCP.Toolkit.dl
 
 - Registry、Repository 和 Tag 完全正确。
 - 参与者已获得研讨会 ACR 角色分配。
+- ACR 管理员用户已启用。
 - Container App 已启用系统分配的托管标识。
 - Container App 标识在讲师 ACR 上拥有 `AcrPull` 角色。
 - ACR 公共网络设置允许从研讨会环境进行访问。

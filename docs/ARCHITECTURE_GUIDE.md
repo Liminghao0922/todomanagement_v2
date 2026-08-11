@@ -9,7 +9,7 @@ The v2 architecture implements a **cloud-native, serverless, AI-augmented** Todo
 - **Azure Functions** — Python HTTP backend for Todo / Project / Conversation / Graph / Tool endpoints
 - **Azure Cosmos DB (serverless)** — SQL containers for transactional data plus a Gremlin graph for task relations
 - **Azure Static Web Apps** — Vue 3 + Vite SPA with MSAL sign-in
-- **Azure OpenAI** — `gpt-4o-mini` and `text-embedding-3-small` deployments
+- **Azure OpenAI** — `gpt-5.4-mini` and `text-embedding-3-small` deployments
 - **Azure AI Foundry** — agent that orchestrates Microsoft Graph + Cosmos + the custom `estimate_hours` tool, invoked from the Function App via the `azure.ai.projects` SDK
 - **Microsoft Entra ID** — SPA sign-in plus a managed identity on the Function App for Cosmos (Gremlin), Foundry, and AAD-mode OpenAI
 
@@ -42,7 +42,7 @@ The v2 architecture implements a **cloud-native, serverless, AI-augmented** Todo
 │  ┌──────────────┐ ┌──────────────┐ ┌────────────────────────┐   │
 │  │ Cosmos DB    │ │ Azure OpenAI │ │ Azure AI Foundry       │   │
 │  │ (serverless) │ │              │ │                        │   │
-│  │              │ │ - gpt-4o-mini│ │ - Agent (gpt-4o-mini)  │   │
+│  │              │ │ - gpt-5.4-mini│ │ - Agent (gpt-5.4-mini) │   │
 │  │ SQL: todo-db │ │ - text-      │ │ - Built-in tools:      │   │
 │  │  • todos     │ │   embedding- │ │    Microsoft Graph     │   │
 │  │  • owners    │ │   3-small    │ │    Cosmos query/Gremlin│   │
@@ -125,7 +125,7 @@ A single Cosmos DB account in **serverless** mode hosts both APIs:
 When `COSMOS_AUTO_CREATE=true` (default for local dev), the service creates missing databases / containers on first use; in Azure with AAD-only credentials the data plane cannot create resources, so Bicep is the source of truth.
 
 ### Azure OpenAI (`services/embedding_service.py`)
-- Chat deployment: `gpt-4o-mini` (used by the Foundry agent for chat / extraction)
+- Chat deployment: `gpt-5.4-mini` (used by the Foundry agent for chat / extraction)
 - Embedding deployment: `text-embedding-3-small` (used by `embed_text` for `create_todo`, `update_todo`, `list_todos?search=...`, and `tools/estimate-hours`)
 
 The Function App authenticates with the deployment key by default (`AZURE_OPENAI_KEY`). For an AAD-only deployment, swap in `DefaultAzureCredential` and grant the managed identity `Cognitive Services OpenAI User`.
@@ -212,7 +212,7 @@ The `ProjectGraphPage` Cytoscape view queries this endpoint per relation type to
 
 ## Configuration Reference
 
-Function App settings (set by `infra/modules/functions.bicep`):
+Function App settings (set by `infra/main.bicep`):
 
 | Setting | Used by | Notes |
 | --- | --- | --- |
