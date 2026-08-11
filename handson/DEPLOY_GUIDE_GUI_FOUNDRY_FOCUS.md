@@ -45,6 +45,7 @@ Required access:
 
 - Contributor or Owner on your participant resource group.
 - Container Apps Contributor on the assigned Container Apps environment.
+- DocumentDB Account Contributor on the instructor-provided Cosmos DB account.
 - Permission to use the instructor ACR image through the assigned environment's system identity.
 - Permission to create an app registration. If you cannot assign Enterprise Application roles, ask the instructor to perform those role assignments.
 
@@ -220,10 +221,9 @@ Private ACR image pulls use the system-assigned identity already enabled on the 
    - Ingress traffic: **Accepting traffic from anywhere**
    - Ingress type: **HTTP**
    - Target port: `8080`
-7. Set minimum replicas to `0` and maximum replicas to `1`.
-8. Select **Review + create** -> **Create**.
-9. Wait until the revision reports **Running**.
-10. Copy the Container App **Application URL** as `MCP_APP_URL`.
+7. Select **Review + create** -> **Create**.
+8. Wait until the revision reports **Running**.
+9. Copy the Container App **Application URL** as `MCP_APP_URL`.
 
 If the assigned environment is not selectable, stop and ask the instructor to verify your Container Apps Contributor assignment. Do not create a replacement environment.
 
@@ -248,19 +248,11 @@ First grant the control-plane reader role:
 Then open Azure Cloud Shell and select **PowerShell**. Run:
 
 ```powershell
-$participantResourceGroup = "<participant-resource-group>"
 $cosmosResourceGroup = "<cosmos-resource-group>"
 $cosmosAccountName = "<cosmos-account-name>"
 $cosmosAccountId = "<instructor-provided-cosmos-resource-id>"
-$mcpAppName = "<assigned-container-app-name>"
 
-$mcpPrincipalId = az resource show `
-  --resource-group $participantResourceGroup `
-  --name $mcpAppName `
-   --resource-type Microsoft.App/containerApps `
-   --api-version 2024-03-01 `
-   --query identity.principalId `
-  --output tsv
+$mcpPrincipalId = "<MCP_PRINCIPAL_ID>"
 
 az cosmosdb sql role assignment create `
   --resource-group $cosmosResourceGroup `

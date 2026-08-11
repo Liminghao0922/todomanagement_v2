@@ -549,6 +549,7 @@ For each participant or participant group, grant:
 | Workshop ACR                        | Owner                      | Lets participants browse/select the shared image in Portal for this lab flow    |
 | Assigned Container Apps environment | Container Apps Contributor | Lets participants create their MCP Container App in the pre-created environment |
 | Participant resource group          | Owner or Contributor       | Lets participants create their assigned Container App resource                  |
+| Shared Cosmos DB account            | DocumentDB Account Contributor | Lets participants create the Cosmos DB SQL data-plane role assignment for their Container App identity |
 
 These broad permissions are acceptable for a temporary training lab but should not be reused as production guidance.
 
@@ -562,12 +563,15 @@ The participant Container App does not need `AcrPull` on its system identity bec
 
 Participants also need permission to create an app registration. If they cannot assign users or managed identities to Enterprise Application roles, the instructor performs those assignments.
 
+`DocumentDB Account Contributor` is assigned to the participant account or participant group. Do not assign it to the Container App identity. The Container App identity receives only the runtime roles listed above.
+
 Success criteria:
 
 - Test participant can select only the assigned Container Apps environment.
 - Test participant can select the assigned environment's system identity for registry authentication.
 - Test participant can select the workshop ACR image.
 - Test participant can create a uniquely named Container App without creating a new environment.
+- Test participant can run `az cosmosdb sql role assignment create` against the shared Cosmos DB account.
 
 ### 5.4 Values To Give Each Participant
 
