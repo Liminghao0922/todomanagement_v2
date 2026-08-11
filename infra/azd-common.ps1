@@ -90,7 +90,7 @@ function Write-JsonFile {
         [int]$Depth = 20
     )
 
-    $path = Join-Path $env:TEMP ("$Prefix-$([guid]::NewGuid()).json")
+    $path = Join-Path ([System.IO.Path]::GetTempPath()) ("$Prefix-$([guid]::NewGuid()).json")
     $Value | ConvertTo-Json -Depth $Depth | Set-Content -Path $path -Encoding utf8
     return $path
 }
