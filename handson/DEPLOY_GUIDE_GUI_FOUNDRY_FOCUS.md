@@ -16,10 +16,10 @@ Record these values before starting:
 | ----------------------------------- | ----------------------------------------------------- |
 | Participant ID                      | `<p01>`                                             |
 | Tenant ID                           | `<tenant-id>`                                       |
+| Todo app URL                        | `<todo-app-url>`                                     |
 | Participant resource group          | `<participant-resource-group>`                      |
 | Cosmos DB account name              | `<cosmos-account-name>`                             |
 | Cosmos DB resource group            | `<cosmos-resource-group>`                           |
-| Cosmos DB resource ID               | `<cosmos-resource-id>`                              |
 | Cosmos DB endpoint                  | `https://<cosmos-account>.documents.azure.com:443/` |
 | Foundry region                      | `<foundry-region>`                                  |
 | ACR login server                    | `<registry>.azurecr.io`                             |
@@ -53,6 +53,23 @@ Cloud Shell PowerShell is used only for a Cosmos DB data-plane role assignment.
 
 ---
 
+## Before You Begin: Generate Your Todo Data
+
+Before creating your Foundry resource, initialize the Todo data associated with your participant account:
+
+1. Open the instructor-provided `TODO_APP_URL` in a private browser window.
+2. Sign in with your assigned participant account.
+3. Open the **Todos** page.
+4. Select **Generate 50 Test Todos** once.
+5. Wait for the operation to complete and confirm that the generated todo items appear on the page.
+
+Checkpoint:
+
+- You can sign in to the Todo app with your participant account.
+- Generated todo items are visible on the **Todos** page.
+
+---
+
 ## 2. Create Your Foundry Resource And Project
 
 ### 2.1 Create Your Foundry Resource
@@ -73,7 +90,7 @@ Cloud Shell PowerShell is used only for a Cosmos DB data-plane role assignment.
 9. Open **Home** and record:
 
    - Project endpoint as `FOUNDRY_PROJECT_ENDPOINT`.
-   - Azure OpenAI endpoint as `AZURE_OPENAI_ENDPOINT`.
+   - Azure OpenAI endpoint removing /openai/v1 as `AZURE_OPENAI_ENDPOINT`, e.g,: `https://aifuondry-todomanagement-p01.openai.azure.com`.
 
 ### 2.2 Assign Foundry User Permission
 
@@ -168,9 +185,7 @@ Checkpoint:
 2. Select **+ Add a permission** -> **My APIs**.
 3. Select your `todomanagementv2-mcp-api-p01` app.
 4. Select **Delegated permissions** -> `access_as_user` -> **Add permissions**.
-5. Select **+ Add a permission** -> **Microsoft Graph** -> **Delegated permissions**.
-6. Add `User.Read`.
-7. If your tenant requires admin consent, ask the instructor to select **Grant admin consent**.
+5. If your tenant requires admin consent, ask the instructor to select **Grant admin consent**.
 
 Checkpoint:
 
@@ -211,16 +226,20 @@ Private ACR image pulls use the system-assigned identity already enabled on the 
    | `AzureAd__TenantId`           | Your`TENANT_ID`                      |
    | `AzureAd__Audience`           | Your`MCP_CLIENT_ID`                  |
    | `COSMOS_ENDPOINT`             | Instructor-provided Cosmos DB endpoint |
-   | `OPENAI_ENDPOINT`             | Your `AZURE_OPENAI_ENDPOINT`         |
+   | `OPENAI_ENDPOINT`             | Your`AZURE_OPENAI_ENDPOINT`          |
    | `OPENAI_EMBEDDING_DEPLOYMENT` | Your`EMBEDDING_DEPLOYMENT_NAME`      |
    | `ASPNETCORE_ENVIRONMENT`      | `Production`                         |
    | `ASPNETCORE_URLS`             | `http://+:8080`                      |
+
+   ![1786453747959](image/DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS/1786453747959.png)
 6. On **Ingress**:
 
    - Ingress: **Enabled**
    - Ingress traffic: **Accepting traffic from anywhere**
    - Ingress type: **HTTP**
    - Target port: `8080`
+
+   ![1786453787990](image/DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS/1786453787990.png)
 7. Select **Review + create** -> **Create**.
 8. Wait until the revision reports **Running**.
 9. Copy the Container App **Application URL** as `MCP_APP_URL`.
@@ -250,7 +269,11 @@ Then open Azure Cloud Shell and select **PowerShell**. Run:
 ```powershell
 $cosmosResourceGroup = "<cosmos-resource-group>"
 $cosmosAccountName = "<cosmos-account-name>"
-$cosmosAccountId = "<instructor-provided-cosmos-resource-id>"
+$cosmosAccountId = az cosmosdb show `
+   --resource-group $cosmosResourceGroup `
+   --name $cosmosAccountName `
+   --query id `
+   --output tsv
 
 $mcpPrincipalId = "<MCP_PRINCIPAL_ID>"
 
@@ -313,7 +336,10 @@ If the portal cannot select the project managed identity, ask the instructor to 
    - Database: `todo-db`
    - Container: `todos`
    - Search text: `adoption-plan`
+   - Vector Property: `embeddings`
+   - Select Properties: `title,description`
 7. Invoke the tool.
+![1786454636662](image/DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS/1786454636662.png)
 
 Expected results:
 
@@ -381,6 +407,7 @@ When suggesting tasks, return:
    | Authentication             | **Microsoft Entra**                       |
    | Authentication type        | **Project Managed Identity**              |
    | Audience                   | Your`MCP_CLIENT_ID`                           |
+![1786454765316](image/DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS/1786454765316.png)
 5. Select **Connect**.
 6. Confirm the tool appears in the agent's tool list.
 7. Save the agent and confirm the new version is **Running** or **Active**.
@@ -401,6 +428,8 @@ Expected behavior:
 - `todo-db` appears in the first response.
 - Tool results come from Cosmos DB rather than model-only knowledge.
 - The prioritization response cites concrete todos returned by the tool.
+- When running prompt 3, you may be asked to provide an `owner_id`. In the Azure portal, open **Microsoft Entra ID**, search for your user principal name (UPN), select your account, and copy the **Object ID** from the **Overview** page.
+![1786455087699](image/DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS/1786455087699.png)
 
 If Foundry requests tool approval, review the tool name and arguments, then approve the call.
 
@@ -411,6 +440,7 @@ If Foundry requests tool approval, review the tool name and arguments, then appr
 ### 6.1 Inspect A Trace
 
 1. Open **Traces** for the agent conversation.
+![1786455569486](image/DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS/1786455569486.png)
 2. Verify that the final answer is grounded in the tool result.
 
 ### 6.2 Tune The Instructions
@@ -421,7 +451,7 @@ Add this constraint to the Agent instructions:
 For prioritization requests, return exactly five items in a Markdown table with columns Rank, Todo, Reason, and Next action.
 ```
 
-Save a new Agent version, rerun the same prompt, and compare:
+Click **Save** to create a new Agent version, rerun the same prompt, and compare:
 
 - Whether the same tool is called
 - Whether tool arguments changed
@@ -449,20 +479,20 @@ The lab is complete when:
 
 ## 8. Troubleshooting
 
-| Symptom                                                          | Check                                                                                                                                    |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Cannot create a Foundry resource                                 | Verify Contributor or Owner access on your participant resource group and`Microsoft.CognitiveServices` provider registration.          |
-| Cannot create a Foundry project                                  | Verify that your participant-specific Foundry resource deployed successfully and is selected.                                            |
-| Embedding deployment fails                                       | Verify`text-embedding-3-small` availability, deployment type, participant-unique deployment name, and quota.                           |
-| Assigned Container Apps environment is not selectable            | Verify subscription and Container Apps Contributor assignment on that environment.                                                       |
-| ACR image is not selectable or revision shows image pull failure | Verify the environment system identity has`AcrPull` and select **System assigned** for managed identity registry authentication. |
-| Container revision does not start                                | Verify target port`8080`, `ASPNETCORE_URLS`, image tag, and all required environment variables.                                      |
-| MCP UI sign-in fails                                             | Verify both redirect URIs, tenant ID, client ID, and user`MCP Tool Executor` assignment.                                               |
-| Direct List Databases returns 403                                | Verify Cosmos DB Account Reader and Cosmos DB Built-in Data Reader assignments for the Container App identity.                           |
-| Vector Search returns 401                                       | Set `OPENAI_ENDPOINT` to `https://<your-foundry-resource>.openai.azure.com/`; verify the Container App identity has Foundry User, then restart the app. |
-| Foundry tool returns 401 or 403                                  | Verify the Foundry project managed identity has`MCP Tool Executor` on your Enterprise Application.                                     |
-| Foundry connection name already exists                           | Use your participant-specific name, such as`AzureCosmosDB-p01`.                                                                        |
-| Agent shows Classic migration messaging                          | Ensure you created**New agent -> Prompt agent**, not a Classic agent or Assistant.                                                 |
-| Agent answers without calling tools                              | Strengthen the tool-first instruction and explicitly request Cosmos DB evidence.                                                         |
+| Symptom                                                          | Check                                                                                                                                                      |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cannot create a Foundry resource                                 | Verify Contributor or Owner access on your participant resource group and`Microsoft.CognitiveServices` provider registration.                            |
+| Cannot create a Foundry project                                  | Verify that your participant-specific Foundry resource deployed successfully and is selected.                                                              |
+| Embedding deployment fails                                       | Verify`text-embedding-3-small` availability, deployment type, participant-unique deployment name, and quota.                                             |
+| Assigned Container Apps environment is not selectable            | Verify subscription and Container Apps Contributor assignment on that environment.                                                                         |
+| ACR image is not selectable or revision shows image pull failure | Verify the environment system identity has`AcrPull` and select **System assigned** for managed identity registry authentication.                   |
+| Container revision does not start                                | Verify target port`8080`, `ASPNETCORE_URLS`, image tag, and all required environment variables.                                                        |
+| MCP UI sign-in fails                                             | Verify both redirect URIs, tenant ID, client ID, and user`MCP Tool Executor` assignment.                                                                 |
+| Direct List Databases returns 403                                | Verify Cosmos DB Account Reader and Cosmos DB Built-in Data Reader assignments for the Container App identity.                                             |
+| Vector Search returns 401                                        | Set`OPENAI_ENDPOINT` to `https://<your-foundry-resource>.openai.azure.com/`; verify the Container App identity has Foundry User, then restart the app. |
+| Foundry tool returns 401 or 403                                  | Verify the Foundry project managed identity has`MCP Tool Executor` on your Enterprise Application.                                                       |
+| Foundry connection name already exists                           | Use your participant-specific name, such as`AzureCosmosDB-p01`.                                                                                          |
+| Agent shows Classic migration messaging                          | Ensure you created**New agent -> Prompt agent**, not a Classic agent or Assistant.                                                                   |
+| Agent answers without calling tools                              | Strengthen the tool-first instruction and explicitly request Cosmos DB evidence.                                                                           |
 
 Ask the instructor before changing the shared ACR or Container Apps environment settings. Only change your participant-specific Foundry resource and project.

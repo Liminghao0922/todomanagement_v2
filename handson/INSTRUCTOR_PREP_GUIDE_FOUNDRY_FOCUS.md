@@ -317,9 +317,8 @@ In Microsoft Entra admin center:
 2. Search by the Application (client) ID from `$clientId`.
 3. Open **Authentication**.
 4. Confirm these SPA redirect URIs exist:
+
    - `$staticWebAppUrl`
-   - `$staticWebAppUrl/`
-   - `http://localhost:5173`
    - `http://localhost:5173/`
 
 If only the trailing-slash values exist, add the non-trailing-slash values too.
@@ -378,7 +377,7 @@ Success criteria:
 
 ## 5. Prepare Container Apps Environments For Participant Cosmos DB MCP Deployments
 
-This section follows the concrete setup pattern from the original instructor guide: [INSTRUCTOR_PREP_GUIDE.md](INSTRUCTOR_PREP_GUIDE.md). The goal is to let participants deploy their own Cosmos DB MCP Container App without creating a Container Apps environment or building the MCP image.
+The goal is to let participants deploy their own Cosmos DB MCP Container App without creating a Container Apps environment or building the MCP image.
 
 Participants should receive an already-built image, an assigned Container Apps environment, and a unique Container App name.
 
@@ -544,18 +543,18 @@ Success criteria:
 
 For each participant or participant group, grant:
 
-| Scope                               | Role                       | Why                                                                             |
-| ----------------------------------- | -------------------------- | ------------------------------------------------------------------------------- |
-| Workshop ACR                        | Owner                      | Lets participants browse/select the shared image in Portal for this lab flow    |
-| Assigned Container Apps environment | Container Apps Contributor | Lets participants create their MCP Container App in the pre-created environment |
-| Participant resource group          | Owner or Contributor       | Lets participants create their assigned Container App resource                  |
+| Scope                               | Role                           | Why                                                                                                    |
+| ----------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Workshop ACR                        | Owner                          | Lets participants browse/select the shared image in Portal for this lab flow                           |
+| Assigned Container Apps environment | Container Apps Contributor     | Lets participants create their MCP Container App in the pre-created environment                        |
+| Participant resource group          | Owner or Contributor           | Lets participants create their assigned Container App resource                                         |
 | Shared Cosmos DB account            | DocumentDB Account Contributor | Lets participants create the Cosmos DB SQL data-plane role assignment for their Container App identity |
 
 These broad permissions are acceptable for a temporary training lab but should not be reused as production guidance.
 
 Each participant enables a system-assigned identity after creating their Container App. Unless participants have role-assignment permission on the shared resources, the instructor must then complete these assignments during the lab:
 
-- `Cosmos DB Account Reader Role` and `Cosmos DB Built-in Data Reader` on the shared Cosmos account to that identity.
+- `Cosmos DB Built-in Data Reader` on the shared Cosmos account to that identity.
 - `Foundry User` on the participant's Foundry resource to that identity.
 - `MCP Tool Executor` on the participant's Enterprise Application to the Foundry project managed identity.
 
@@ -612,25 +611,6 @@ The participant lab creates participant-specific Foundry resources, projects, an
 6. Test with a participant account that it can create `aifoundry-todomanagement-p01`, create `proj-todomanagement-p01`, and deploy `text-embedding-3-small-p01`.
 7. Confirm the participant can deploy `gpt-5.4-mini` after deploying `text-embedding-3-small` and before creating the MCP Container App.
 8. Delete the test Foundry resource, or reserve it for the instructor dry run.
-
-After the agent exists, update Function App settings so the Todo app Copilot panel can call the agent:
-
-```powershell
-$foundryProjectEndpoint = "<foundry-project-endpoint-from-azd-output>"
-$foundryAgentName = "todomanagement-agent"
-$foundryAgentVersion = "<agent-version>"
-
-az functionapp config appsettings set `
-  --resource-group $resourceGroup `
-  --name $functionAppName `
-  --settings `
-    FOUNDRY_PROJECT_ENDPOINT=$foundryProjectEndpoint `
-    FOUNDRY_AGENT_ENDPOINT=$foundryProjectEndpoint `
-    FOUNDRY_AGENT_NAME=$foundryAgentName `
-    FOUNDRY_AGENT_VERSION=$foundryAgentVersion
-
-az functionapp restart --resource-group $resourceGroup --name $functionAppName
-```
 
 Success criteria:
 

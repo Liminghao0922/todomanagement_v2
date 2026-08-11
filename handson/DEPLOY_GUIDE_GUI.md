@@ -100,12 +100,12 @@ You do not create a GitHub repository, credentials, secrets, or workflows.
 9. Open the account, copy **URI** from **Overview** (`https://<cosmos>.documents.azure.com:443/`), and save it. You will use it in Phase 3 and Phase 4.
 10. Open **Data Explorer** → **New Database** → ID `todo-db`. Then create four containers:
 
-   | Container         | Partition key |
-   | ----------------- | ------------- |
-   | `todos`         | `/owner_id` |
-   | `owners`        | `/id`       |
-   | `projects`      | `/owner_id` |
-   | `conversations` | `/owner_id` |
+| Container         | Partition key |
+| ----------------- | ------------- |
+| `todos`         | `/owner_id` |
+| `owners`        | `/id`       |
+| `projects`      | `/owner_id` |
+| `conversations` | `/owner_id` |
 
 ![Cosmos containers](image/DEPLOY_GUIDE_GUI/03-cosmos-containers.png)
 📖 Reference:[https://learn.microsoft.com/azure/cosmos-db/nosql/quickstart-portal](https://learn.microsoft.com/azure/cosmos-db/nosql/quickstart-portal)
@@ -235,13 +235,15 @@ After provisioning:
 
 After creation:
 6. In **Authentication** → **+ Add URI**, add the following URIs and save:
-   - `https://<swa>.azurestaticapps.net` (without trailing slash)
-   - `https://<swa>.azurestaticapps.net/` (with trailing slash)
-   - Optional: `http://localhost:5173` (without trailing slash)
-   - Optional: `http://localhost:5173/` (with trailing slash)
+
+- `https://<swa>.azurestaticapps.net` (without trailing slash)
+- `https://<swa>.azurestaticapps.net/` (with trailing slash)
+- Optional: `http://localhost:5173` (without trailing slash)
+- Optional: `http://localhost:5173/` (with trailing slash)
+
 7. From the **Overview** page, copy:
-    - **Application (client) ID** → save as `CLIENT_ID`
-    - **Directory (tenant) ID** → save as `TENANT_ID`
+   - **Application (client) ID** → save as `CLIENT_ID`
+   - **Directory (tenant) ID** → save as `TENANT_ID`
 
 📖 Reference: [https://learn.microsoft.com/entra/identity-platform/quickstart-register-app](https://learn.microsoft.com/entra/identity-platform/quickstart-register-app)
 
@@ -478,20 +480,20 @@ If the registry or image is not selectable, stop and ask the instructor to confi
 
 In the Function App → **Settings** → **Environment variables** → **+ Add**, add the following variables:
 
-| Name                              | Value                                                                                                      |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------  |
+| Name                                | Value                                                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `AZURE_CLIENT_ID`           　    | `<func-todomanagement-uami-client-id>`, the User Assigned Identity's **Client Id** from step 1.5        　 |
-| `COSMOS_AUTO_CREATE`           　 | `true`                                                                                                  　 |
-| `COSMOS_AUTH_MODE`             　 | `aad`                                                                                                   　 |
-| `COSMOS_ENDPOINT`              　 | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.2                                 　 |
-| `COSMOS_DATABASE`              　 | `todo-db`                                                                                               　 |
-| `COSMOS_GREMLIN_ENDPOINT`      　 | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.3                                 　 |
-| `COSMOS_GRAPH_DATABASE`        　 | `todo-graph-db`                                                                                         　 |
-| `COSMOS_GRAPH_NAME`            　 | `todo-graph`                                                                                            　 |
-| `FOUNDRY_AGENT_ENDPOINT`       　 | `https://<foundry>.services.ai.azure.com/api/projects/proj-default`, the project endpoint from step 1.4 　 |
-| `FOUNDRY_EMBEDDING_DEPLOYMENT` 　 | `text-embedding-3-small`                                                                                　 |
-| `FOUNDRY_AGENT_NAME`           　 | `todomanagement-agent`, the agent name from step 3.2                                                    　 |
-| `FOUNDRY_AGENT_VERSION`        　 | e.g.`1`, the version from step 3.2                                                                      　 |
+| `COSMOS_AUTO_CREATE`           　 | `true`                                                                                                  　       |
+| `COSMOS_AUTH_MODE`             　 | `aad`                                                                                                   　       |
+| `COSMOS_ENDPOINT`              　 | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.2                                 　       |
+| `COSMOS_DATABASE`              　 | `todo-db`                                                                                               　       |
+| `COSMOS_GREMLIN_ENDPOINT`      　 | `https://<cosmos>.documents.azure.com:443/`, the endpoint from step 1.3                                 　       |
+| `COSMOS_GRAPH_DATABASE`        　 | `todo-graph-db`                                                                                         　       |
+| `COSMOS_GRAPH_NAME`            　 | `todo-graph`                                                                                            　       |
+| `FOUNDRY_AGENT_ENDPOINT`       　 | `https://<foundry>.services.ai.azure.com/api/projects/proj-default`, the project endpoint from step 1.4 　       |
+| `FOUNDRY_EMBEDDING_DEPLOYMENT` 　 | `text-embedding-3-small`                                                                                　       |
+| `FOUNDRY_AGENT_NAME`           　 | `todomanagement-agent`, the agent name from step 3.2                                                    　       |
+| `FOUNDRY_AGENT_VERSION`        　 | e.g.`1`, the version from step 3.2                                                                      　       |
 
 Click **Apply**.
 
@@ -547,6 +549,7 @@ Click **Apply**.
    Set-Location "$repoRoot\src\api"
    func azure functionapp publish $functionAppName --python
    ```
+
    ![Function Deployed](image/DEPLOY_GUIDE_GUI/func-deployment-result.png)
 3. Verify the API:
 
@@ -608,8 +611,8 @@ This step makes browser requests to `/api/*` reach your separate Function App.
    - Resource name: your Function App
    - Backend slot: **Production**
 5. Select **Link**.
-![Link to function](image/DEPLOY_GUIDE_GUI/swa-link-to-function.png)
-The Static Web App must use the **Standard** plan for this integration.
+   ![Link to function](image/DEPLOY_GUIDE_GUI/swa-link-to-function.png)
+   The Static Web App must use the **Standard** plan for this integration.
 
 📖 Reference: [Bring your own functions to Azure Static Web Apps](https://learn.microsoft.com/azure/static-web-apps/functions-bring-your-own)
 
