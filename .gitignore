@@ -510,3 +510,7 @@ infra/main.parameters.json
 
 # Local backup folders
 handson-backup-*/
+
+
+# Local backup folders
+local*/
