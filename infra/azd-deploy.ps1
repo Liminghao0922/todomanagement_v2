@@ -269,7 +269,7 @@ function Publish-FunctionApplication {
 
     Write-Host "[azd-deploy] Publishing Functions API..." -ForegroundColor Yellow
     $sourcePath = Join-Path $Context.RepoRoot "src/api"
-    $packagePath = Join-Path $env:TEMP ("todomanagement-functions-$([guid]::NewGuid()).zip")
+    $packagePath = Join-Path ([System.IO.Path]::GetTempPath()) ("todomanagement-functions-$([guid]::NewGuid()).zip")
     try {
         Compress-Archive -Path @(
             (Join-Path $sourcePath "function_app.py"),
