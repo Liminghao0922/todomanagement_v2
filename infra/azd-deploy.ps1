@@ -316,6 +316,7 @@ function Publish-StaticWebApplication {
     Write-Host "[azd-deploy] Building and deploying Static Web App..." -ForegroundColor Yellow
     Push-Location (Join-Path $Context.RepoRoot "src/web")
     try {
+        $distPath = Join-Path (Get-Location) "dist"
         $env:VITE_AZURE_CLIENT_ID = $Context.ClientId
         $env:VITE_AZURE_AUTHORITY = "https://login.microsoftonline.com/$($Context.TenantId)"
         $env:VITE_AZURE_REDIRECT_URI = $Context.StaticWebAppUrl
@@ -323,7 +324,7 @@ function Publish-StaticWebApplication {
         if ($LASTEXITCODE -ne 0) { throw "npm ci failed." }
         npm run build
         if ($LASTEXITCODE -ne 0) { throw "Frontend build failed." }
-        Copy-Item staticwebapp.config.json dist\staticwebapp.config.json -Force
+        Copy-Item staticwebapp.config.json (Join-Path $distPath "staticwebapp.config.json") -Force
 
         $token = az staticwebapp secrets list `
             --name $Context.StaticWebAppName `
@@ -333,7 +334,7 @@ function Publish-StaticWebApplication {
         if ([string]::IsNullOrWhiteSpace($token)) {
             throw "Could not retrieve the Static Web Apps deployment token."
         }
-        npx --yes @azure/static-web-apps-cli@latest deploy .\dist --env production --deployment-token $token
+        npx --yes @azure/static-web-apps-cli@latest deploy $distPath --env production --deployment-token $token
         if ($LASTEXITCODE -ne 0) { throw "Static Web App deployment failed." }
     }
     finally {
