@@ -510,6 +510,3 @@ infra/main.parameters.json
 
 # Local backup folders
 handson-backup-*/
-
-# azd local scaffold manifest (optional to track per team workflow)
-azure.yaml

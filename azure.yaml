@@ -1,0 +1,16 @@
+name: todomanagement-v2
+metadata:
+  template: todomanagement-v2@0.0.1-beta
+infra:
+  provider: bicep
+  path: infra
+  module: main
+hooks:
+  postprovision:
+    shell: pwsh
+    run: ./infra/azd-postprovision.ps1
+    interactive: true
+  postdeploy:
+    shell: pwsh
+    run: ./infra/azd-deploy.ps1
+    interactive: true
