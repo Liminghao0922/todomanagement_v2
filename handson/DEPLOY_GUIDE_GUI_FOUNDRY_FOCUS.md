@@ -2,9 +2,9 @@
 
 [English](DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS.md) | [简体中文](DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS-zh_CN.md) | [日本語](DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS-ja_JP.md)
 
-This lab focuses on a participant-owned Foundry resource, project, embedding deployment, MCP identity, Cosmos DB MCP Container App, and new Microsoft Foundry Prompt agent. The instructor prepares the shared application infrastructure, Container Apps environments, and container image before class.
+This lab focuses on a participant-owned Foundry resource, project, embedding and GPT model deployments, MCP identity, the Cosmos DB MCP Container App, and a new Microsoft Foundry Prompt agent. The instructor prepares the shared application infrastructure, Container Apps environments, and container image before class.
 
-Estimated time: 60-90 minutes.
+Estimated time: 60–90 minutes.
 
 ---
 
@@ -82,15 +82,15 @@ Checkpoint:
    - Subscription: instructor-provided workshop subscription.
    - Resource group: your participant resource group.
    - Resource name: `aifoundry-todomanagement-p01`, replacing `p01` with your participant ID. The name must be globally unique.
-   - Region: instructor-provided Foundry region， e.g.: **Japan East**.
+   - Region: instructor-provided Foundry region, for example: **Japan East**.
 5. Keep the instructor-provided defaults on the remaining tabs unless directed otherwise.
 6. Select **Review + create** -> **Create**.
 7. Wait until deployment succeeds, then select **Go to resource**.
-8. On the Azure Portal **Overview** page for `FOUNDRY_RESOURCE_NAME`, select **Go to Foundry portal**.
+8. On the Azure portal **Overview** page for `FOUNDRY_RESOURCE_NAME`, select **Go to Foundry portal**.
 9. Open **Home** and record:
 
    - Project endpoint as `FOUNDRY_PROJECT_ENDPOINT`.
-   - Azure OpenAI endpoint removing /openai/v1 as `AZURE_OPENAI_ENDPOINT`, e.g,: `https://aifuondry-todomanagement-p01.openai.azure.com`.
+   - Azure OpenAI endpoint with `/openai/v1` removed as `AZURE_OPENAI_ENDPOINT`, for example: `https://aifuondry-todomanagement-p01.openai.azure.com`.
 
 ### 2.2 Assign Foundry User Permission
 
@@ -170,13 +170,16 @@ Checkpoint:
 
 1. Open **App roles**.
 2. Select **+ Create app role**.
-3. Enter:| Setting              | Value                                        |
-   | -------------------- | -------------------------------------------- |
-   | Display name         | `MCP Tool Executor`                        |
+3. Enter the following values:
+
+   | Setting | Value |
+   | --- | --- |
+   | Display name | `MCP Tool Executor` |
    | Allowed member types | **Both (Users/Groups + Applications)** |
-   | Value                | `Mcp.Tool.Executor`                        |
-   | Description          | `Execute Cosmos DB MCP tools`              |
-   | Enable this app role | Checked                                      |
+   | Value | `Mcp.Tool.Executor` |
+   | Description | `Execute Cosmos DB MCP tools` |
+   | Enable this app role | Checked |
+
 4. Select **Apply**.
 
 ### 4.4 Add Delegated API Permissions
@@ -220,16 +223,16 @@ Private ACR image pulls use the system-assigned identity already enabled on the 
    - Memory: `1 GiB`
 5. Add these environment variables:
 
-   | Name                            | Value                                  |
-   | ------------------------------- | -------------------------------------- |
-   | `AzureAd__ClientId`           | Your`MCP_CLIENT_ID`                  |
-   | `AzureAd__TenantId`           | Your`TENANT_ID`                      |
-   | `AzureAd__Audience`           | Your`MCP_CLIENT_ID`                  |
-   | `COSMOS_ENDPOINT`             | Instructor-provided Cosmos DB endpoint |
-   | `OPENAI_ENDPOINT`             | Your`AZURE_OPENAI_ENDPOINT`          |
-   | `OPENAI_EMBEDDING_DEPLOYMENT` | Your`EMBEDDING_DEPLOYMENT_NAME`      |
-   | `ASPNETCORE_ENVIRONMENT`      | `Production`                         |
-   | `ASPNETCORE_URLS`             | `http://+:8080`                      |
+   | Name | Value |
+   | --- | --- |
+   | `AzureAd__ClientId` | `MCP_CLIENT_ID` |
+   | `AzureAd__TenantId` | `TENANT_ID` |
+   | `AzureAd__Audience` | `MCP_CLIENT_ID` |
+   | `COSMOS_ENDPOINT` | Instructor-provided Cosmos DB endpoint |
+   | `OPENAI_ENDPOINT` | `AZURE_OPENAI_ENDPOINT` |
+   | `OPENAI_EMBEDDING_DEPLOYMENT` | `EMBEDDING_DEPLOYMENT_NAME` |
+   | `ASPNETCORE_ENVIRONMENT` | `Production` |
+   | `ASPNETCORE_URLS` | `http://+:8080` |
 
    ![1786453747959](image/DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS/1786453747959.png)
 6. On **Ingress**:
@@ -257,7 +260,7 @@ If the private image cannot be pulled, verify that the environment system identi
 
 ### 4.7 Grant The Identity Access To Cosmos DB
 
-First grant the control-plane reader role:
+First, grant the control-plane reader role:
 
 1. Open the instructor-provided Cosmos DB for NoSQL account.
 2. Open **Access control (IAM)** -> **+ Add role assignment**.
@@ -285,9 +288,9 @@ az cosmosdb sql role assignment create `
   --scope $cosmosAccountId
 ```
 
-The role ID ending in `0001` is **Cosmos DB Built-in Data Reader**.
+The role definition ID ending in `0001` is **Cosmos DB Built-in Data Reader**.
 
-### 4.9 Grant The Identity Access To Foundry
+### 4.8 Grant The Identity Access To Foundry
 
 1. Open your participant-specific Foundry resource in the Azure portal.
 2. Open **Access control (IAM)** -> **+ Add role assignment**.
@@ -298,16 +301,16 @@ The role ID ending in `0001` is **Cosmos DB Built-in Data Reader**.
 
 `Foundry User` includes the Foundry and Azure OpenAI data-plane permissions required to generate embeddings. Do not add another inference role for this lab.
 
-### 4.10 Configure Redirect URIs
+### 4.9 Configure Redirect URIs
 
-1. Open **Microsoft Entra ID** -> **App registrations** -> your MCP app registration.
+1. Open **Microsoft Entra ID** -> **App registrations** and select your MCP app registration.
 2. Open **Authentication**.
 3. Select **+ Add a platform** -> **Single-page application**.
-4. Add both redirect URIs:
+4. Add the redirect URI:
    - `https://<your-container-app-hostname>/`
 5. Save the configuration.
 
-### 4.11 Assign MCP Tool Executor
+### 4.10 Assign MCP Tool Executor
 
 Assign the role to your user:
 
@@ -325,7 +328,7 @@ Assign the same role to the Foundry project's managed identity:
 
 If the portal cannot select the project managed identity, ask the instructor to perform this assignment. This Entra permission is separate from Azure subscription RBAC.
 
-### 4.12 Test The MCP Toolkit Directly
+### 4.11 Test The MCP Toolkit Directly
 
 1. Open `MCP_APP_URL` in a private browser window.
 2. Enter your `MCP_CLIENT_ID` and `TENANT_ID` if prompted.
@@ -400,13 +403,16 @@ When suggesting tasks, return:
 1. In the agent editor, remove **Web search** if it was added automatically.
 2. Select **Add** -> **Browse all tools**.
 3. Search for and select **Azure Cosmos DB**.
-4. Create a new connection using:| Setting                    | Value                                           |
-   | -------------------------- | ----------------------------------------------- |
-   | Connection name            | `AzureCosmosDB-p01` using your participant ID |
-   | Remote MCP Server endpoint | `https://<your-container-app-hostname>/mcp`   |
-   | Authentication             | **Microsoft Entra**                       |
-   | Authentication type        | **Project Managed Identity**              |
-   | Audience                   | Your`MCP_CLIENT_ID`                           |
+4. Create a new connection using the following values:
+
+   | Setting | Value |
+   | --- | --- |
+   | Connection name | `AzureCosmosDB-p01` using your participant ID |
+   | Remote MCP Server endpoint | `https://<your-container-app-hostname>/mcp` |
+   | Authentication | **Microsoft Entra** |
+   | Authentication type | **Project Managed Identity** |
+   | Audience | `MCP_CLIENT_ID` |
+
 ![1786454765316](image/DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS/1786454765316.png)
 5. Select **Connect**.
 6. Confirm the tool appears in the agent's tool list.
@@ -481,18 +487,18 @@ The lab is complete when:
 
 | Symptom                                                          | Check                                                                                                                                                      |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cannot create a Foundry resource                                 | Verify Contributor or Owner access on your participant resource group and`Microsoft.CognitiveServices` provider registration.                            |
-| Cannot create a Foundry project                                  | Verify that your participant-specific Foundry resource deployed successfully and is selected.                                                              |
-| Embedding deployment fails                                       | Verify`text-embedding-3-small` availability, deployment type, participant-unique deployment name, and quota.                                             |
-| Assigned Container Apps environment is not selectable            | Verify subscription and Container Apps Contributor assignment on that environment.                                                                         |
-| ACR image is not selectable or revision shows image pull failure | Verify the environment system identity has`AcrPull` and select **System assigned** for managed identity registry authentication.                   |
-| Container revision does not start                                | Verify target port`8080`, `ASPNETCORE_URLS`, image tag, and all required environment variables.                                                        |
-| MCP UI sign-in fails                                             | Verify both redirect URIs, tenant ID, client ID, and user`MCP Tool Executor` assignment.                                                                 |
-| Direct List Databases returns 403                                | Verify Cosmos DB Account Reader and Cosmos DB Built-in Data Reader assignments for the Container App identity.                                             |
-| Vector Search returns 401                                        | Set`OPENAI_ENDPOINT` to `https://<your-foundry-resource>.openai.azure.com/`; verify the Container App identity has Foundry User, then restart the app. |
-| Foundry tool returns 401 or 403                                  | Verify the Foundry project managed identity has`MCP Tool Executor` on your Enterprise Application.                                                       |
-| Foundry connection name already exists                           | Use your participant-specific name, such as`AzureCosmosDB-p01`.                                                                                          |
-| Agent shows Classic migration messaging                          | Ensure you created**New agent -> Prompt agent**, not a Classic agent or Assistant.                                                                   |
-| Agent answers without calling tools                              | Strengthen the tool-first instruction and explicitly request Cosmos DB evidence.                                                                           |
+| Cannot create a Foundry resource | Verify Contributor or Owner access on your participant resource group and the `Microsoft.CognitiveServices` provider registration. |
+| Cannot create a Foundry project | Verify that your participant-specific Foundry resource deployed successfully and is selected. |
+| Embedding deployment fails | Verify `text-embedding-3-small` availability, deployment type, participant-unique deployment name, and quota. |
+| Assigned Container Apps environment is not selectable | Verify subscription and Container Apps Contributor assignment on that environment. |
+| ACR image is not selectable or revision shows image pull failure | Verify that the environment system identity has `AcrPull` and select **System assigned** for managed identity registry authentication. |
+| Container revision does not start | Verify target port `8080`, `ASPNETCORE_URLS`, image tag, and all required environment variables. |
+| MCP UI sign-in fails | Verify both redirect URIs, tenant ID, client ID, and your `MCP Tool Executor` assignment. |
+| Direct List Databases returns 403 | Verify Cosmos DB Account Reader and Cosmos DB Built-in Data Reader assignments for the Container App identity. |
+| Vector Search returns 401 | Set `OPENAI_ENDPOINT` to `https://<your-foundry-resource>.openai.azure.com/`; verify that the Container App identity has **Foundry User**, then restart the app. |
+| Foundry tool returns 401 or 403 | Verify that the Foundry project managed identity has `MCP Tool Executor` on your Enterprise Application. |
+| Foundry connection name already exists | Use your participant-specific name, such as `AzureCosmosDB-p01`. |
+| Agent shows Classic migration messaging | Ensure you created **New agent -> Prompt agent**, not a Classic agent or Assistant. |
+| Agent answers without calling tools | Strengthen the tool-first instruction and explicitly request Cosmos DB evidence. |
 
 Ask the instructor before changing the shared ACR or Container Apps environment settings. Only change your participant-specific Foundry resource and project.

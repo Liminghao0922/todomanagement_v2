@@ -2,9 +2,9 @@
 
 [English](DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS.md) | [简体中文](DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS-zh_CN.md) | [日本語](DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS-ja_JP.md)
 
-本实验聚焦参与者自有的 Foundry 资源、项目、嵌入部署、MCP 身份、Cosmos DB MCP Container App 以及全新的 Microsoft Foundry Prompt agent。讲师会在课前准备共享应用基础设施、Container Apps 环境和容器镜像。
+本实验聚焦参与者自有的 Foundry 资源、项目、embedding 和 GPT 模型部署、MCP 身份、Cosmos DB MCP Container App，以及全新的 Microsoft Foundry Prompt agent。讲师会在课前准备共享应用基础设施、Container Apps 环境和容器镜像。
 
-预计耗时：60-90 分钟。
+预计耗时：60–90 分钟。
 
 ---
 
@@ -82,15 +82,15 @@ Cloud Shell PowerShell 仅用于一次 Cosmos DB 数据平面角色分配。
    - Subscription：讲师提供的 workshop subscription。
    - Resource group：你的 participant resource group。
    - Resource name：`aifoundry-todomanagement-p01`，将 `p01` 替换为你的参与者 ID。该名称必须全局唯一。
-   - Region：讲师提供的 Foundry region， e.g.: **Japan East**。
+   - Region：讲师提供的 Foundry region，例如：**Japan East**。
 5. 其余选项卡保持讲师提供的默认值，除非有额外指示。
 6. 选择 **Review + create** -> **Create**。
 7. 等待部署成功，然后选择 **Go to resource**。
-8. 在 `FOUNDRY_RESOURCE_NAME` 的 Azure Portal **Overview** 页面，选择 **Go to Foundry portal**。
+8. 在 Azure portal 的 `FOUNDRY_RESOURCE_NAME` **Overview** 页面中，选择 **Go to Foundry portal**。
 9. 打开 **Home** 并记录：
 
    - Project endpoint 记为 `FOUNDRY_PROJECT_ENDPOINT`。
-   - 去掉 /openai/v1 的 Azure OpenAI endpoint 记为 `AZURE_OPENAI_ENDPOINT`，e.g,: `https://aifuondry-todomanagement-p01.openai.azure.com`。
+   - 去掉 `/openai/v1` 的 Azure OpenAI endpoint 记为 `AZURE_OPENAI_ENDPOINT`，例如：`https://aifuondry-todomanagement-p01.openai.azure.com`。
 
 ### 2.2 分配 Foundry User 权限
 
@@ -170,13 +170,16 @@ Cloud Shell PowerShell 仅用于一次 Cosmos DB 数据平面角色分配。
 
 1. 打开 **App roles**。
 2. 选择 **+ Create app role**。
-3. 输入：| Setting              | Value                                        |
-   | -------------------- | -------------------------------------------- |
-   | Display name         | `MCP Tool Executor`                        |
+3. 输入以下值：
+
+   | Setting | Value |
+   | --- | --- |
+   | Display name | `MCP Tool Executor` |
    | Allowed member types | **Both (Users/Groups + Applications)** |
-   | Value                | `Mcp.Tool.Executor`                        |
-   | Description          | `Execute Cosmos DB MCP tools`              |
-   | Enable this app role | Checked                                      |
+   | Value | `Mcp.Tool.Executor` |
+   | Description | `Execute Cosmos DB MCP tools` |
+   | Enable this app role | Checked |
+
 4. 选择 **Apply**。
 
 ### 4.4 添加 Delegated API Permissions
@@ -222,14 +225,14 @@ Cloud Shell PowerShell 仅用于一次 Cosmos DB 数据平面角色分配。
 
    | 名称                            | 值                                    |
    | ------------------------------- | ------------------------------------- |
-   | `AzureAd__ClientId`             | 你的 `MCP_CLIENT_ID`                  |
-   | `AzureAd__TenantId`             | 你的 `TENANT_ID`                      |
-   | `AzureAd__Audience`             | 你的 `MCP_CLIENT_ID`                  |
-   | `COSMOS_ENDPOINT`               | 讲师提供的 Cosmos DB 终结点           |
-   | `OPENAI_ENDPOINT`               | 你的 `AZURE_OPENAI_ENDPOINT`          |
-   | `OPENAI_EMBEDDING_DEPLOYMENT`   | 你的 `EMBEDDING_DEPLOYMENT_NAME`      |
-   | `ASPNETCORE_ENVIRONMENT`        | `Production`                          |
-   | `ASPNETCORE_URLS`               | `http://+:8080`                       |
+   | `AzureAd__ClientId` | `MCP_CLIENT_ID` |
+   | `AzureAd__TenantId` | `TENANT_ID` |
+   | `AzureAd__Audience` | `MCP_CLIENT_ID` |
+   | `COSMOS_ENDPOINT` | 讲师提供的 Cosmos DB 终结点 |
+   | `OPENAI_ENDPOINT` | `AZURE_OPENAI_ENDPOINT` |
+   | `OPENAI_EMBEDDING_DEPLOYMENT` | `EMBEDDING_DEPLOYMENT_NAME` |
+   | `ASPNETCORE_ENVIRONMENT` | `Production` |
+   | `ASPNETCORE_URLS` | `http://+:8080` |
 
    ![1786453747959](image/DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS/1786453747959.png)
 6. 在 **Ingress**：
@@ -257,7 +260,7 @@ Cloud Shell PowerShell 仅用于一次 Cosmos DB 数据平面角色分配。
 
 ### 4.7 向该 Identity 授予 Cosmos DB 访问权限
 
-先授予控制平面读取角色：
+首先，授予控制平面读取角色：
 
 1. 打开讲师提供的 Cosmos DB for NoSQL account。
 2. 打开 **Access control (IAM)** -> **+ Add role assignment**。
@@ -325,7 +328,7 @@ az cosmosdb sql role assignment create `
 
 如果 portal 无法选择 project managed identity，请让讲师执行该分配。这个 Entra 权限与 Azure subscription RBAC 是分开的。
 
-### 4.12 直接测试 MCP Toolkit
+### 4.11 直接测试 MCP Toolkit
 
 1. 在无痕浏览器窗口中打开 `MCP_APP_URL`。
 2. 如有提示，输入你的 `MCP_CLIENT_ID` 和 `TENANT_ID`。
@@ -400,13 +403,16 @@ When suggesting tasks, return:
 1. 在 agent editor 中，如果自动添加了 **Web search**，请移除。
 2. 选择 **Add** -> **Browse all tools**。
 3. 搜索并选择 **Azure Cosmos DB**。
-4. 使用以下配置创建新连接：| 设置                         | 值                                               |
-   | ---------------------------- | ------------------------------------------------ |
-   | Connection name              | 使用你的参与者 ID，例如 `AzureCosmosDB-p01`      |
-   | Remote MCP Server endpoint   | `https://<your-container-app-hostname>/mcp`       |
-   | Authentication               | **Microsoft Entra**                              |
-   | Authentication type          | **Project Managed Identity**                     |
-   | Audience                     | 你的 `MCP_CLIENT_ID`                             |
+4. 使用以下值创建新连接：
+
+   | Setting | Value |
+   | --- | --- |
+   | Connection name | 使用你的参与者 ID，例如 `AzureCosmosDB-p01` |
+   | Remote MCP Server endpoint | `https://<your-container-app-hostname>/mcp` |
+   | Authentication | **Microsoft Entra** |
+   | Authentication type | **Project Managed Identity** |
+   | Audience | `MCP_CLIENT_ID` |
+
 ![1786454765316](image/DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS/1786454765316.png)
 5. 选择 **Connect**。
 6. 确认该工具出现在 agent 的工具列表中。
@@ -481,18 +487,18 @@ For prioritization requests, return exactly five items in a Markdown table with 
 
 | 症状                                      | 检查项                                                                                                                   |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| 无法创建 Foundry resource                 | 验证你在参与者资源组上拥有 Contributor 或 Owner 权限，并确认已注册 `Microsoft.CognitiveServices` 资源提供程序。          |
-| 无法创建 Foundry project                  | 验证参与者专属 Foundry resource 已成功部署并处于选中状态。                                                               |
-| Embedding 部署失败                        | 验证 `text-embedding-3-small` 的可用性、部署类型、参与者唯一部署名称和配额。                                               |
-| 无法选择分配的 Container Apps environment | 验证订阅，并确认你在该环境上具有 Container Apps Contributor 角色。                                                       |
-| 无法选择 ACR 镜像或 revision 显示镜像拉取失败 | 验证环境的 system identity 具有 `AcrPull`，并为 managed identity registry authentication 选择 **System assigned**。     |
-| Container revision 无法启动               | 验证目标端口 `8080`、`ASPNETCORE_URLS`、镜像标记和所有必需的环境变量。                                                    |
-| MCP UI 登录失败                           | 验证两个 redirect URI、tenant ID、client ID，以及用户的 `MCP Tool Executor` 分配。                                        |
-| 直接执行 List Databases 返回 403          | 验证已向 Container App identity 分配 Cosmos DB Account Reader 和 Cosmos DB Built-in Data Reader。                         |
-| Vector Search 返回 401                    | 将 `OPENAI_ENDPOINT` 设置为 `https://<your-foundry-resource>.openai.azure.com/`；验证 Container App identity 具有 Foundry User，然后重启应用。 |
-| Foundry tool 返回 401 或 403              | 验证 Foundry project managed identity 在你的 Enterprise Application 上具有 `MCP Tool Executor`。                         |
-| Foundry connection name 已存在            | 使用参与者专属名称，例如 `AzureCosmosDB-p01`。                                                                           |
-| Agent 显示 Classic migration 消息         | 确认创建的是 **New agent -> Prompt agent**，而不是 Classic agent 或 Assistant。                                           |
-| Agent 未调用工具便直接回答                | 强化 tool-first instruction，并明确要求提供 Cosmos DB 证据。                                                             |
+| 无法创建 Foundry resource | 验证你在参与者资源组上拥有 Contributor 或 Owner 权限，并确认已注册 `Microsoft.CognitiveServices` 资源提供程序。 |
+| 无法创建 Foundry project | 验证参与者专属 Foundry resource 已成功部署并处于选中状态。 |
+| Embedding 部署失败 | 验证 `text-embedding-3-small` 的可用性、部署类型、参与者唯一部署名称和配额。 |
+| 无法选择分配的 Container Apps environment | 验证订阅，并确认你在该环境上具有 Container Apps Contributor 角色。 |
+| 无法选择 ACR 镜像或 revision 显示镜像拉取失败 | 验证环境的 system identity 具有 `AcrPull`，并为 managed identity registry authentication 选择 **System assigned**。 |
+| Container revision 无法启动 | 验证目标端口 `8080`、`ASPNETCORE_URLS`、镜像标记和所有必需的环境变量。 |
+| MCP UI 登录失败 | 验证两个 redirect URI、tenant ID、client ID，以及用户的 `MCP Tool Executor` 分配。 |
+| 直接执行 List Databases 返回 403 | 验证已向 Container App identity 分配 Cosmos DB Account Reader 和 Cosmos DB Built-in Data Reader。 |
+| Vector Search 返回 401 | 将 `OPENAI_ENDPOINT` 设置为 `https://<your-foundry-resource>.openai.azure.com/`；验证 Container App identity 具有 **Foundry User**，然后重启应用。 |
+| Foundry tool 返回 401 或 403 | 验证 Foundry project managed identity 在你的 Enterprise Application 上具有 `MCP Tool Executor`。 |
+| Foundry connection name 已存在 | 使用参与者专属名称，例如 `AzureCosmosDB-p01`。 |
+| Agent 显示 Classic migration 消息 | 确认创建的是 **New agent -> Prompt agent**，而不是 Classic agent 或 Assistant。 |
+| Agent 未调用工具便直接回答 | 强化 tool-first instruction，并明确要求提供 Cosmos DB 证据。 |
 
 在更改共享 ACR 或 Container Apps environment 设置前，请先咨询讲师。只更改你参与者专属的 Foundry resource 和 project。

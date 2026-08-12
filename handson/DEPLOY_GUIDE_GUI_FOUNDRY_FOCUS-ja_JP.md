@@ -2,9 +2,9 @@
 
 [English](DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS.md) | [简体中文](DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS-zh_CN.md) | [日本語](DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS-ja_JP.md)
 
-このラボでは、受講者ごとに所有する Foundry リソース、プロジェクト、埋め込みデプロイ、MCP ID、Cosmos DB MCP Container App、および新しい Microsoft Foundry Prompt agent に重点を置きます。講師は授業前に、共有アプリケーション インフラストラクチャ、Container Apps 環境、コンテナー イメージを準備します。
+このラボでは、受講者ごとに所有する Foundry リソース、プロジェクト、embedding と GPT モデルのデプロイ、MCP ID、Cosmos DB MCP Container App、および新しい Microsoft Foundry Prompt agent に重点を置きます。講師は授業前に、共有アプリケーション インフラストラクチャ、Container Apps 環境、コンテナー イメージを準備します。
 
-所要時間の目安: 60-90 分。
+所要時間の目安: 60–90 分。
 
 ---
 
@@ -86,7 +86,7 @@ Foundry リソースを作成する前に、受講者アカウントに紐づく
 5. 別途指示がない限り、残りのタブは講師提供の既定値のままにします。
 6. **Review + create** -> **Create** を選択します。
 7. デプロイが成功するまで待ち、**Go to resource** を選択します。
-8. Azure Portal の `FOUNDRY_RESOURCE_NAME` の **Overview** ページで、**Go to Foundry portal** を選択します。
+8. Azure portal の `FOUNDRY_RESOURCE_NAME` の **Overview** ページで、**Go to Foundry portal** を選択します。
 9. **Home** を開き、次を記録します。
 
    - Project endpoint を `FOUNDRY_PROJECT_ENDPOINT` として記録。
@@ -170,13 +170,16 @@ Foundry リソースを作成する前に、受講者アカウントに紐づく
 
 1. **App roles** を開きます。
 2. **+ Create app role** を選択します。
-3. 次を入力します。| Setting              | Value                                        |
-   | -------------------- | -------------------------------------------- |
-   | Display name         | `MCP Tool Executor`                          |
-   | Allowed member types | **Both (Users/Groups + Applications)**       |
-   | Value                | `Mcp.Tool.Executor`                          |
-   | Description          | `Execute Cosmos DB MCP tools`                |
-   | Enable this app role | Checked                                      |
+3. 次の値を入力します。
+
+   | Setting | Value |
+   | --- | --- |
+   | Display name | `MCP Tool Executor` |
+   | Allowed member types | **Both (Users/Groups + Applications)** |
+   | Value | `Mcp.Tool.Executor` |
+   | Description | `Execute Cosmos DB MCP tools` |
+   | Enable this app role | Checked |
+
 4. **Apply** を選択します。
 
 ### 4.4 委任 API 権限を追加する
@@ -222,14 +225,14 @@ Foundry リソースを作成する前に、受講者アカウントに紐づく
 
    | Name                            | Value                                  |
    | ------------------------------- | -------------------------------------- |
-   | `AzureAd__ClientId`            | Your`MCP_CLIENT_ID`                    |
-   | `AzureAd__TenantId`            | Your`TENANT_ID`                        |
-   | `AzureAd__Audience`            | Your`MCP_CLIENT_ID`                    |
-   | `COSMOS_ENDPOINT`              | Instructor-provided Cosmos DB endpoint |
-   | `OPENAI_ENDPOINT`              | Your`AZURE_OPENAI_ENDPOINT`            |
-   | `OPENAI_EMBEDDING_DEPLOYMENT`  | Your`EMBEDDING_DEPLOYMENT_NAME`        |
-   | `ASPNETCORE_ENVIRONMENT`       | `Production`                           |
-   | `ASPNETCORE_URLS`              | `http://+:8080`                        |
+   | `AzureAd__ClientId` | `MCP_CLIENT_ID` |
+   | `AzureAd__TenantId` | `TENANT_ID` |
+   | `AzureAd__Audience` | `MCP_CLIENT_ID` |
+   | `COSMOS_ENDPOINT` | 講師提供の Cosmos DB エンドポイント |
+   | `OPENAI_ENDPOINT` | `AZURE_OPENAI_ENDPOINT` |
+   | `OPENAI_EMBEDDING_DEPLOYMENT` | `EMBEDDING_DEPLOYMENT_NAME` |
+   | `ASPNETCORE_ENVIRONMENT` | `Production` |
+   | `ASPNETCORE_URLS` | `http://+:8080` |
 
    ![1786453747959](image/DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS/1786453747959.png)
 6. **Ingress** で次を設定します。
@@ -287,7 +290,7 @@ az cosmosdb sql role assignment create `
 
 `0001` で終わる role ID は **Cosmos DB Built-in Data Reader** です。
 
-### 4.9 ID に Foundry へのアクセス権を付与する
+### 4.8 ID に Foundry へのアクセス権を付与する
 
 1. Azure portal で、受講者専用の Foundry resource を開きます。
 2. **Access control (IAM)** -> **+ Add role assignment** を開きます。
@@ -298,16 +301,16 @@ az cosmosdb sql role assignment create `
 
 `Foundry User` には、埋め込み生成に必要な Foundry および Azure OpenAI データ プレーン権限が含まれます。このラボでは追加の推論ロールを付与しないでください。
 
-### 4.10 Redirect URI を構成する
+### 4.9 Redirect URI を構成する
 
-1. **Microsoft Entra ID** -> **App registrations** -> MCP app registration を開きます。
+1. **Microsoft Entra ID** -> **App registrations** を開き、MCP app registration を選択します。
 2. **Authentication** を開きます。
 3. **+ Add a platform** -> **Single-page application** を選択します。
 4. 次の Redirect URI を追加します。
    - `https://<your-container-app-hostname>/`
 5. 構成を保存します。
 
-### 4.11 MCP Tool Executor を割り当てる
+### 4.10 MCP Tool Executor を割り当てる
 
 まず、ユーザーにロールを割り当てます。
 
@@ -325,7 +328,7 @@ az cosmosdb sql role assignment create `
 
 ポータルでプロジェクト managed identity を選択できない場合は、講師にこの割り当てを依頼してください。この Entra 権限は Azure サブスクリプション RBAC とは別です。
 
-### 4.12 MCP Toolkit を直接テストする
+### 4.11 MCP Toolkit を直接テストする
 
 1. `MCP_APP_URL` をプライベート ブラウザー ウィンドウで開きます。
 2. 求められた場合は `MCP_CLIENT_ID` と `TENANT_ID` を入力します。
@@ -400,13 +403,16 @@ When suggesting tasks, return:
 1. agent editor で、自動追加されている場合は **Web search** を削除します。
 2. **Add** -> **Browse all tools** を選択します。
 3. **Azure Cosmos DB** を検索して選択します。
-4. 次の設定で新しい connection を作成します。| Setting                    | Value                                           |
-   | -------------------------- | ----------------------------------------------- |
-   | Connection name            | `AzureCosmosDB-p01` using your participant ID   |
-   | Remote MCP Server endpoint | `https://<your-container-app-hostname>/mcp`     |
-   | Authentication             | **Microsoft Entra**                             |
-   | Authentication type        | **Project Managed Identity**                    |
-   | Audience                   | Your`MCP_CLIENT_ID`                             |
+4. 次の値を使用して新しい connection を作成します。
+
+   | Setting | Value |
+   | --- | --- |
+   | Connection name | 受講者 ID を使って `AzureCosmosDB-p01` を設定 |
+   | Remote MCP Server endpoint | `https://<your-container-app-hostname>/mcp` |
+   | Authentication | **Microsoft Entra** |
+   | Authentication type | **Project Managed Identity** |
+   | Audience | `MCP_CLIENT_ID` |
+
 ![1786454765316](image/DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS/1786454765316.png)
 5. **Connect** を選択します。
 6. agent の tool 一覧に表示されることを確認します。
@@ -481,18 +487,18 @@ For prioritization requests, return exactly five items in a Markdown table with 
 
 | 症状                                                             | 確認事項                                                                                                                                                   |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Foundry resource を作成できない                                  | 受講者用リソース グループでの Contributor または Owner 権限と、`Microsoft.CognitiveServices` provider 登録を確認してください。                          |
-| Foundry project を作成できない                                   | 受講者専用 Foundry resource が正常にデプロイ済みであり、選択されていることを確認してください。                                                           |
-| Embedding デプロイに失敗する                                     | `text-embedding-3-small` の提供可否、デプロイ種別、受講者固有のデプロイ名、クォータを確認してください。                                                  |
-| 割り当て済み Container Apps 環境を選択できない                   | サブスクリプションと、その環境に対する Container Apps Contributor 割り当てを確認してください。                                                           |
-| ACR イメージを選択できない、またはリビジョンで image pull に失敗する | 環境の system identity に `AcrPull` があることを確認し、レジストリ認証で managed identity の **System assigned** を選択してください。               |
-| Container リビジョンが起動しない                                 | target port `8080`、`ASPNETCORE_URLS`、image tag、必須環境変数を確認してください。                                                                        |
-| MCP UI サインインに失敗する                                      | 2 つの redirect URI、tenant ID、client ID、ユーザーへの `MCP Tool Executor` 割り当てを確認してください。                                                  |
-| 直接の List Databases が 403 を返す                              | Container App identity に対する Cosmos DB Account Reader と Cosmos DB Built-in Data Reader の割り当てを確認してください。                                 |
-| Vector Search が 401 を返す                                      | `OPENAI_ENDPOINT` を `https://<your-foundry-resource>.openai.azure.com/` に設定し、Container App identity に Foundry User があることを確認後、アプリを再起動してください。 |
-| Foundry tool が 401 または 403 を返す                            | Foundry project managed identity に、Enterprise Application 上で `MCP Tool Executor` が割り当てられていることを確認してください。                       |
-| Foundry connection 名が既に存在する                              | `AzureCosmosDB-p01` のように受講者固有名を使用してください。                                                                                               |
-| Agent に Classic migration メッセージが表示される                | **New agent -> Prompt agent** を作成していることを確認し、Classic agent や Assistant は作成しないでください。                                            |
-| Agent が tool を呼び出さずに回答する                             | tool-first の指示を強化し、Cosmos DB の根拠を明示的に要求してください。                                                                                    |
+| Foundry resource を作成できない | 受講者用リソース グループでの Contributor または Owner 権限と、`Microsoft.CognitiveServices` provider 登録を確認してください。 |
+| Foundry project を作成できない | 受講者専用 Foundry resource が正常にデプロイ済みであり、選択されていることを確認してください。 |
+| Embedding デプロイに失敗する | `text-embedding-3-small` の提供可否、デプロイ種別、受講者固有のデプロイ名、クォータを確認してください。 |
+| 割り当て済み Container Apps 環境を選択できない | サブスクリプションと、その環境に対する Container Apps Contributor 割り当てを確認してください。 |
+| ACR イメージを選択できない、またはリビジョンで image pull に失敗する | 環境の system identity に `AcrPull` があることを確認し、レジストリ認証で managed identity の **System assigned** を選択してください。 |
+| Container リビジョンが起動しない | target port `8080`、`ASPNETCORE_URLS`、image tag、必須環境変数を確認してください。 |
+| MCP UI サインインに失敗する | 2 つの redirect URI、tenant ID、client ID、ユーザーへの `MCP Tool Executor` 割り当てを確認してください。 |
+| 直接の List Databases が 403 を返す | Container App identity に対する Cosmos DB Account Reader と Cosmos DB Built-in Data Reader の割り当てを確認してください。 |
+| Vector Search が 401 を返す | `OPENAI_ENDPOINT` を `https://<your-foundry-resource>.openai.azure.com/` に設定し、Container App identity に **Foundry User** があることを確認後、アプリを再起動してください。 |
+| Foundry tool が 401 または 403 を返す | Foundry project managed identity に、Enterprise Application 上で `MCP Tool Executor` が割り当てられていることを確認してください。 |
+| Foundry connection 名が既に存在する | `AzureCosmosDB-p01` のように受講者固有名を使用してください。 |
+| Agent に Classic migration メッセージが表示される | **New agent -> Prompt agent** を作成していることを確認し、Classic agent や Assistant は作成しないでください。 |
+| Agent が tool を呼び出さずに回答する | tool-first の指示を強化し、Cosmos DB の根拠を明示的に要求してください。 |
 
 共有 ACR や Container Apps 環境の設定を変更する前に、講師へ確認してください。変更対象は受講者専用 Foundry resource と project のみにしてください。
