@@ -4,9 +4,9 @@
 
 [参与者指南](DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS-zh_CN.md)
 
-本指南定义了面向初学者的 Todo Management v2 研讨会中由讲师负责的准备工作。讲师需在课前完成部署、登录访问配置，以及共享 Container Apps 环境准备。参与者则在实验中自行创建 Foundry 资源、项目和 embedding 部署，然后构建 Cosmos DB MCP 工具与 Prompt agent。
+本指南概述了面向初学者的 Todo Management v2 研讨会中由讲师负责的准备工作。课前，讲师需完成部署、配置登录访问，并准备共享 Container Apps 环境。随后，参与者将创建自己的 Foundry 资源和项目，部署自己的 embedding 和 GPT 模型，并构建 Cosmos DB MCP 工具与 Prompt agent。
 
-讲师准备主要分为四个部分：
+讲师准备主要包括四个部分：
 
 1. 使用 `azd` 部署完整 Todo 应用。
 2. 配置参与者对 Todo 应用的登录权限。
@@ -682,4 +682,4 @@ PUT 响应初期可能显示 `Waiting`。Azure 完成预配后，请确认所有
 | MCP 工具无法列出数据库                               | 检查 Cosmos endpoint、managed identity/app role，以及 tenant/client ID        |
 | Foundry 工具调用失败                                 | 使用预先准备的备用 agent 或预采集 trace，并继续授课流程                       |
 
-开课前请至少准备一个已验证可用的测试参与者账号和一个已验证可用的 MCP Container App。
+建议至少准备一个已验证可用的测试参与者账号，以及一个已验证可用的 MCP Container App，以备开课前使用。

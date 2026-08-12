@@ -4,9 +4,9 @@
 
 [受講者ガイド](DEPLOY_GUIDE_GUI_FOUNDRY_FOCUS-ja_JP.md)
 
-このガイドは、初級者に配慮した Todo Management v2 ワークショップにおいて、講師側で実施するセットアップを定義します。講師は授業前にデプロイ、サインインアクセス、共有 Container Apps 環境の準備を完了します。受講者はその後、Cosmos DB MCP ツールと Prompt agent の構築に入る前に、各自の Foundry リソース、プロジェクト、埋め込みデプロイを作成します。
+このガイドでは、初級者向けの Todo Management v2 ワークショップにおける、講師側のセットアップを概説します。授業前に、講師はデプロイ、サインインアクセスの構成、共有 Container Apps 環境の準備を完了します。その後、受講者は各自の Foundry リソースとプロジェクトを作成し、独自の embedding と GPT モデルをデプロイし、Cosmos DB MCP ツールと Prompt agent を構築します。
 
-講師準備は、主に次の 4 つで構成されます。
+講師の準備は、主に次の 4 つで構成されます。
 
 1. `azd` で Todo アプリ全体をデプロイする。
 2. 受講者が Todo アプリへサインインできる権限を構成する。
