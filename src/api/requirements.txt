@@ -1,6 +1,7 @@
 azure-identity>=1.19.0
-azure-ai-projects>=2.1.0
+azure-ai-projects==2.4.0
 azure-functions>=1.21.3
 azure-cosmos>=4.7.0
-openai>=1.52.2
+openai==2.48.0
+httpx==0.28.1
 gremlinpython>=3.7.2
