@@ -313,12 +313,6 @@ az cosmosdb sql role assignment create `
 4. ユーザーと **MCP Tool Executor** ロールを選択します。
 5. 割り当てを完了します。
 
-次に、同じロールを Foundry プロジェクトの managed identity に割り当てます。
-
-1. 同じ Enterprise Application で **+ Add user/group** を選択します。
-2. `<foundry-account-name>/projects/<project-name>` という名前の managed identity を選択します。
-3. **MCP Tool Executor** ロールを選択し、割り当てを完了します。
-
 ポータルでプロジェクト managed identity を選択できない場合は、講師にこの割り当てを依頼してください。この Entra 権限は Azure サブスクリプション RBAC とは別です。
 
 ### 4.11 MCP Toolkit を直接テストする
