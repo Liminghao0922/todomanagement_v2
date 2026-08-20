@@ -548,7 +548,7 @@ Container App 名は、共有環境内で一意である必要があります。
 | ワークショップ ACR                  | Owner                          | このラボのフローで、受講者が Portal 上で共有イメージを参照/選択できるようにする                         |
 | 割り当て済み Container Apps 環境    | Container Apps Contributor     | 事前作成済み環境に、受講者が自分の MCP Container App を作成できるようにする                             |
 | 受講者リソースグループ              | Owner or Contributor           | 割り当てられた Container App リソースを受講者が作成できるようにする                                     |
-| 共有 Cosmos DB account              | DocumentDB Account Contributor | Container App identity に対する Cosmos DB SQL data-plane role assignment を受講者が作成できるようにする |
+| 共有 Cosmos DB account              | User Access Administrator と DocumentDB Account Contributor | Container App identity に対する Cosmos DB SQL data-plane role assignment を受講者が作成できるようにする |
 
 これらの広い権限は一時的なトレーニング ラボでは許容できますが、本番ガイダンスとして再利用しないでください。
 
@@ -562,7 +562,7 @@ Container App 名は、共有環境内で一意である必要があります。
 
 受講者には app registration 作成権限も必要です。受講者が Enterprise Application ロールへのユーザーまたは managed identity 割り当てを実行できない場合、講師がその割り当てを行います。
 
-`DocumentDB Account Contributor` は受講者アカウントまたは受講者グループに割り当てます。Container App identity には割り当てないでください。Container App identity には、上記の実行時ロールのみを付与します。
+`User Access Administrator`と`DocumentDB Account Contributor` は受講者アカウントまたは受講者グループに割り当てます。Container App identity には割り当てないでください。Container App identity には、上記の実行時ロールのみを付与します。
 
 成功条件:
 
