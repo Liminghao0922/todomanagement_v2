@@ -312,7 +312,7 @@ az cosmosdb sql role assignment create `
 
 ### 4.10 MCP Tool Executor を割り当てる
 
-まず、ユーザーにロールを割り当てます。
+まず、ご自分のユーザー（受講者のアカウント）にロールを割り当てます。
 
 1. **Microsoft Entra ID** -> **Enterprise applications** を開きます。
 2. `todomanagementv2-mcp-api-p01` アプリケーションを見つけます。
