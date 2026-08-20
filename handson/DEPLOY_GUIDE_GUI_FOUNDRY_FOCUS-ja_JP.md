@@ -260,14 +260,7 @@ Foundry リソースを作成する前に、受講者アカウントに紐づく
 
 ### 4.7 ID に Cosmos DB へのアクセス権を付与する
 
-まず、コントロール プレーンの reader ロールを付与します。
-
-1. 講師提供の Cosmos DB for NoSQL アカウントを開きます。
-2. **Access control (IAM)** -> **+ Add role assignment** を開きます。
-3. **Cosmos DB Account Reader Role** を選択します。
-4. Container App の system-assigned managed identity に割り当てます。
-
-次に Azure Cloud Shell を開き、**PowerShell** を選択します。以下を実行してください。
+Azure Cloud Shell を開き、**PowerShell** を選択します。以下を実行してください。
 
 ```powershell
 $cosmosResourceGroup = "<cosmos-resource-group>"
